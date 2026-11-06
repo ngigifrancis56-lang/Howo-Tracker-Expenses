@@ -126,6 +126,29 @@ table{min-width:650px}th{background:#f5f8fc;color:#52657b;font-size:11px;text-tr
 }
 @media(max-width:380px){.dashboard-live{font-size:10px;padding:7px 9px}.week-controls{align-items:stretch;flex-direction:column}.week-controls button{align-self:flex-start}}
 
+
+/* Polished weekly financial summary */
+.financial-summary{border:1px solid #e7edf3;border-radius:16px;overflow:hidden;background:#fff}
+.financial-profit{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px;background:linear-gradient(120deg,#f0faf5,#f8fcff);border-bottom:1px solid #e5eee9}
+.financial-label{display:block;color:#55746a;font-size:10px;font-weight:900;letter-spacing:.13em}
+.financial-caption{display:block;color:#718397;font-size:11px;margin-top:5px}
+.financial-profit strong{font-size:clamp(20px,2.3vw,26px);font-weight:900;letter-spacing:-.04em;text-align:right;overflow-wrap:anywhere}
+.financial-rows{padding:7px 16px}
+.financial-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 2px;border-bottom:1px solid #eef2f6;font-size:13px}
+.financial-row:last-child{border-bottom:0}
+.financial-row>span{color:#53677c;display:flex;align-items:center;gap:8px}
+.financial-row> b{color:#213b55;font-size:13px;font-variant-numeric:tabular-nums;text-align:right}
+.financial-row i{font-style:normal;display:grid;place-items:center;width:21px;height:21px;border-radius:7px;background:#f0f4f8;color:#6a7d90;font-weight:900}
+.financial-row.income-row i{background:#e9f8ef;color:#16804a}
+.financial-row.income-row>b{color:#16804a}
+.financial-total{margin:2px -4px;padding:12px 6px;background:#f7f9fc;border-radius:9px}
+.financial-total>span{font-weight:800;color:#344d65}
+.financial-total>b{font-weight:850}
+.financial-equation{padding:12px 16px;background:#f8fafc;border-top:1px solid #edf1f5;display:flex;flex-direction:column;gap:5px}
+.financial-equation span{font-size:10px;color:#8391a1}
+.financial-equation b{font-size:11px;color:#64788c;font-weight:700;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+@media(max-width:760px){.financial-profit{padding:15px}.financial-rows{padding:6px 12px}.financial-row{font-size:12px}.financial-row>b{font-size:12px}.financial-equation{padding:11px 13px}}
+
 </style>
 </head>
 <body>\n<div id="pullRefreshIndicator" class="pull-refresh-indicator" aria-live="polite">↓ Pull down to refresh</div>
@@ -257,7 +280,17 @@ $('weekRangeLabel').textContent='Week: '+dateFromISO(from).toLocaleDateString(un
 $('wIncome').textContent=money(income);$('wExpenses').textContent=money(oper);$('wPay').textContent=money(pay);$('wProfit').textContent=money(profit);$('wProfit').className=profit<0?'red':'green';$('wTrips').textContent=ts.length;$('wOtherExpenses').textContent=money(other);$('wTripCosts').textContent=money(tripCosts);$('wAverage').textContent=money(ts.length?income/ts.length:0);
 let daily=[];for(let i=0;i<7;i++){let d=dateFromISO(from);d.setDate(d.getDate()+i);let key=isoLocal(d),dayTrips=ts.filter(x=>x.date===key),dayExpenses=ex.filter(x=>x.date===key),inc=dayTrips.reduce((a,x)=>a+Number(x.income||0),0),cost=expenseTotal(dayTrips)+dayExpenses.reduce((a,x)=>a+Number(x.amount||0),0),driver=dayTrips.reduce((a,x)=>a+Number(x.driverPay||0),0);daily.push([d.toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'}),dayTrips.length,money(inc),money(cost),money(driver),money(inc-cost-driver)])}
 $('weeklyDailyTable').innerHTML=table(['Day','Trips','Income','Operating costs','Driver pay','Net profit'],daily);
-$('weeklyBreakdown').innerHTML=[['Trip income',income],['Fuel & trip costs',tripCosts],['Other business expenses',other],['Total operating expenses',oper],['Driver pay earned',pay],['WEEKLY NET PROFIT',profit]].map(([k,v])=>'<div class="summaryline"><span>'+k+'</span><b class="'+(k==='WEEKLY NET PROFIT'?(v<0?'red':'green'):'')+'">'+money(v)+'</b></div>').join('');
+$('weeklyBreakdown').innerHTML=`<div class="financial-summary">
+<div class="financial-profit"><div><span class="financial-label">WEEKLY NET PROFIT</span><span class="financial-caption">Income after costs and driver pay</span></div><strong class="${profit<0?'red':'green'}">${money(profit)}</strong></div>
+<div class="financial-rows">
+<div class="financial-row income-row"><span><i>＋</i> Trip income</span><b>${money(income)}</b></div>
+<div class="financial-row"><span><i>−</i> Fuel & trip costs</span><b>${money(tripCosts)}</b></div>
+<div class="financial-row"><span><i>−</i> Other business expenses</span><b>${money(other)}</b></div>
+<div class="financial-row financial-total"><span>Total operating expenses</span><b>${money(oper)}</b></div>
+<div class="financial-row"><span><i>−</i> Driver pay earned</span><b>${money(pay)}</b></div>
+</div>
+<div class="financial-equation"><span>Trip income − operating expenses − driver pay</span><b>${money(income)} − ${money(oper)} − ${money(pay)}</b></div>
+</div>`;
 let drivers=data.drivers.map(d=>{let ds=ts.filter(x=>x.driverId===d.id),earned=ds.reduce((a,x)=>a+Number(x.driverPay||0),0),adj=data.adjustments.filter(a=>a.driverId===d.id&&a.date>=from&&a.date<=to),adv=adj.filter(a=>a.type==='advance').reduce((a,x)=>a+Number(x.amount||0),0),ded=adj.filter(a=>a.type==='deduction').reduce((a,x)=>a+Number(x.amount||0),0),paid=adj.filter(a=>a.type==='payment').reduce((a,x)=>a+Number(x.amount||0),0);return [esc(d.name),ds.length,money(earned),money(adv),money(ded),money(paid),money(earned-adv-ded-paid)]}).filter(r=>r[1]||r.slice(3).some(x=>x!=='KSh 0'));
 $('weeklyDriverTable').innerHTML=table(['Driver','Trips','Pay earned','Advances','Deductions','Settlements','Week balance'],drivers);
 $('weeklyTripTable').innerHTML=table(['Date','Vehicle','Driver','Material','Income','Trip costs','Driver pay','Trip profit'],ts.slice().sort((a,b)=>a.date.localeCompare(b.date)).map(x=>[x.date,name(data.vehicles,x.vehicleId),name(data.drivers,x.driverId),esc(x.material),money(x.income),money(Number(x.fuel||0)+Number(x.otherCost||0)),money(x.driverPay),money(Number(x.income||0)-Number(x.fuel||0)-Number(x.otherCost||0)-Number(x.driverPay||0))]));
