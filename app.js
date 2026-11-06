@@ -1,19 +1,21 @@
+import { $, today, money, blank, uid, opts, esc, isoLocal, dateFromISO, weekBounds, name, table } from "./modules/utils.js";
+import { driverCalc, expenseTotal } from "./modules/finance.js";
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, setPersistence, browserLocalPersistence, indexedDBLocalPersistence, signOut as fbSignOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, addDoc, updateDoc, onSnapshot, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-const $=id=>document.getElementById(id), today=()=>new Date().toLocaleDateString('en-CA'), money=n=>'KSh '+Number(n||0).toLocaleString('en-KE',{maximumFractionDigits:2});
+
 let db=null,auth=null,user=null,cloudReady=false,authUnsubscribe=null,authApp=null;
-const blank=()=>({vehicles:[],drivers:[],trips:[],expenses:[],adjustments:[]});
+
 let data=JSON.parse(localStorage.getItem('fleetledger-data')||'null')||blank();
 let chatUnsubscribe=null;let chatSending=false;
 const save=()=>{localStorage.setItem('fleetledger-data',JSON.stringify(data));render();if(cloudReady)syncCloud().catch(e=>status('Cloud sync error: '+e.message));};
 function status(s){$('firebaseStatus').textContent=s;$('syncBadge').textContent=cloudReady?'☁ Cloud Sync Active':'Local Storage · Not connected';$('syncBadge').style.background=cloudReady?'#d9f4e7':'#fff6e5';$('syncBadge').style.color=cloudReady?'#16804a':'#815600';}
-function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
-function opts(sel,arr,first){let old=sel.value;sel.innerHTML=(first?'<option value="">'+first+'</option>':'')+arr.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');if(arr.some(x=>x.id===old))sel.value=old;}
-function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
+
+
 function tripsFor(day){return data.trips.filter(t=>!day||t.date===day)}
-function driverCalc(did,from='',to=''){let ts=data.trips.filter(t=>t.driverId===did&&(!from||t.date>=from)&&(!to||t.date<=to));let earned=ts.reduce((s,t)=>s+Number(t.driverPay||0),0);let adj=data.adjustments.filter(a=>a.driverId===did&&(!from||a.date>=from)&&(!to||a.date<=to));let advances=adj.filter(a=>a.type==='advance').reduce((s,a)=>s+a.amount,0),ded=adj.filter(a=>a.type==='deduction').reduce((s,a)=>s+a.amount,0),settled=adj.filter(a=>a.type==='payment').reduce((s,a)=>s+a.amount,0);return {trips:ts.length,earned,advances,ded,settled,balance:earned-advances-ded-settled};}
-function expenseTotal(ts){return ts.reduce((s,t)=>s+Number(t.fuel||0)+Number(t.otherCost||0),0)}
+
+
 function render(){
 if(!$('weekStart').value)$('weekStart').value=weekBounds(today()).from;renderWeekly();
 let day=today(),ts=tripsFor(day),ex=data.expenses.filter(e=>e.date===day),income=ts.reduce((s,t)=>s+t.income,0),oper=expenseTotal(ts)+ex.reduce((s,e)=>s+e.amount,0),pay=ts.reduce((s,t)=>s+t.driverPay,0),profit=income-oper-pay;
@@ -25,15 +27,15 @@ let rows=ts.slice(-6).reverse();$('recentTrips').innerHTML=table(['Date','Vehicl
 opts($('tripVehicle'),data.vehicles,'Select vehicle');opts($('expenseVehicle'),data.vehicles,'General / no vehicle');opts($('tripDriver'),data.drivers,'Select driver');opts($('adjustDriver'),data.drivers,'Select driver');['tripFilterVehicle','reportVehicle'].forEach(id=>opts($(id),data.vehicles,'All vehicles'));
 let filterDate=$('tripFilterDate').value,filterV=$('tripFilterVehicle').value;
 $('tripTable').innerHTML=table(['Date','Vehicle','Driver','Material / quantity','Customer / site','Income','Driver pay','Notes','Manage'],data.trips.filter(t=>(!filterDate||t.date===filterDate)&&(!filterV||t.vehicleId===filterV)).slice().reverse().map(t=>[t.date,name(data.vehicles,t.vehicleId),name(data.drivers,t.driverId),`${esc(t.material)} · ${t.quantity} ${esc(t.unit)}`,`${esc(t.customer)}<br>${esc(t.destination)}`,money(t.income),money(t.driverPay),esc(t.notes),`<div class="actions"><button class="btn secondary small" data-edit-trip="${t.id}">Edit</button><button class="btn danger small" data-delete="trips:${t.id}">Delete</button></div>`]));
-$('driverTable').innerHTML=table(['Driver','Phone','Trips','Earned pay','Advances','Deductions','Settled','Balance due','Manage'],data.drivers.map(d=>{let c=driverCalc(d.id);return [esc(d.name),esc(d.phone||'—'),c.trips,money(c.earned),money(c.advances),money(c.ded),money(c.settled),`<b class="${c.balance<0?'red':'green'}">${money(c.balance)}</b>`,`<div class="actions"><button class="btn secondary small" data-edit-driver="${d.id}">Edit</button><button class="btn danger small" data-delete="drivers:${d.id}">Delete</button></div>`]}));
+$('driverTable').innerHTML=table(['Driver','Phone','Trips','Earned pay','Advances','Deductions','Settled','Balance due','Manage'],data.drivers.map(d=>{let c=driverCalc(data,d.id);return [esc(d.name),esc(d.phone||'—'),c.trips,money(c.earned),money(c.advances),money(c.ded),money(c.settled),`<b class="${c.balance<0?'red':'green'}">${money(c.balance)}</b>`,`<div class="actions"><button class="btn secondary small" data-edit-driver="${d.id}">Edit</button><button class="btn danger small" data-delete="drivers:${d.id}">Delete</button></div>`]}));
 $('adjustTable').innerHTML=table(['Date','Driver','Type','Amount','Note',''],data.adjustments.slice().reverse().map(a=>[a.date,name(data.drivers,a.driverId),a.type,money(a.amount),esc(a.note),`<button class="btn danger small" data-delete="adjustments:${a.id}">Delete</button>`]));
 $('expenseTable').innerHTML=table(['Date','Vehicle','Category','Vendor','Amount','Notes',''],data.expenses.slice().reverse().map(e=>[e.date,name(data.vehicles,e.vehicleId)||'General',esc(e.category),esc(e.vendor),money(e.amount),esc(e.notes),`<button class="btn danger small" data-delete="expenses:${e.id}">Delete</button>`]));
 $('vehicleTable').innerHTML=table(['Vehicle','Type','Trips','Income','Operating costs',''],data.vehicles.map(v=>{let a=data.trips.filter(t=>t.vehicleId===v.id),b=data.expenses.filter(e=>e.vehicleId===v.id);return [esc(v.name),esc(v.type),a.length,money(a.reduce((s,t)=>s+t.income,0)),money(expenseTotal(a)+b.reduce((s,e)=>s+e.amount,0)),`<button class="btn danger small" data-delete="vehicles:${v.id}">Delete</button>`]}));
 $('fleetSummary').innerHTML=`<div class="summaryline"><span>Vehicles</span><b>${data.vehicles.length}</b></div><div class="summaryline"><span>Drivers</span><b>${data.drivers.length}</b></div><div class="summaryline"><span>All recorded trips</span><b>${data.trips.length}</b></div>`;
 }
-function isoLocal(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
-function dateFromISO(v){let p=String(v||'').split('-').map(Number);return new Date(p[0],p[1]-1,p[2])}
-function weekBounds(value){let d=dateFromISO(value||today());d.setHours(0,0,0,0);let offset=(d.getDay()+6)%7;d.setDate(d.getDate()-offset);let end=new Date(d);end.setDate(end.getDate()+6);return {from:isoLocal(d),to:isoLocal(end)}}
+
+
+
 function renderWeekly(){
 let chosen=$('weekStart').value||today(),bounds=weekBounds(chosen),from=bounds.from,to=bounds.to;
 let ts=data.trips.filter(x=>x.date>=from&&x.date<=to),ex=data.expenses.filter(x=>x.date>=from&&x.date<=to);
@@ -57,8 +59,8 @@ let drivers=data.drivers.map(d=>{let ds=ts.filter(x=>x.driverId===d.id),earned=d
 $('weeklyDriverTable').innerHTML=table(['Driver','Trips','Pay earned','Advances','Deductions','Settlements','Week balance'],drivers);
 $('weeklyTripTable').innerHTML=table(['Date','Vehicle','Driver','Material','Income','Trip costs','Driver pay','Trip profit'],ts.slice().sort((a,b)=>a.date.localeCompare(b.date)).map(x=>[x.date,name(data.vehicles,x.vehicleId),name(data.drivers,x.driverId),esc(x.material),money(x.income),money(Number(x.fuel||0)+Number(x.otherCost||0)),money(x.driverPay),money(Number(x.income||0)-Number(x.fuel||0)-Number(x.otherCost||0)-Number(x.driverPay||0))]));
 }
-function name(arr,id){return arr.find(x=>x.id===id)?.name||'—'}
-function table(head,rows){if(!rows.length)return '<div class="empty">No records yet</div>';return `<table><thead><tr>${head.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c??''}</td>`).join('')}</tr>`).join('')}</tbody></table>`}
+
+
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('.panel').forEach(x=>x.classList.toggle('active',x.id===b.dataset.tab));render()});
 document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>document.querySelector(`[data-tab="${b.dataset.go}"]`).click());
 $('floatingChatButton').onclick=()=>document.querySelector('[data-tab="chat"]').click();
