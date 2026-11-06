@@ -16,5 +16,19 @@
       "sizes": "512x512",
       "type": "image/png"
     }
-  ]
+  ],
+  "id": "./",
+  "scope": "./",
+  "description": "Manage truck trips, income, fuel, expenses, driver payments and fleet profit.",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "categories": [
+    "business",
+    "finance",
+    "productivity"
+  ],
+  "prefer_related_applications": false
 }
