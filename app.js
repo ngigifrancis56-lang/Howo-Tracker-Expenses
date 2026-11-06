@@ -7,7 +7,7 @@ import { initDataTools } from "./modules/data-tools.js";
 import { initReports } from "./modules/reports.js";
 import { driverCalc, expenseTotal } from "./modules/finance.js";
 
-const state={db:null,auth:null,user:null,cloudReady:false,authUnsubscribe:null,authApp:null,chatUnsubscribe:null};
+const state={db:null,auth:null,user:null,cloudReady:false,syncPending:localStorage.getItem('fleetledger-sync-pending')==='1',authUnsubscribe:null,authApp:null,chatUnsubscribe:null};
 
 let data=JSON.parse(localStorage.getItem('fleetledger-data')||'null')||blank();
 
@@ -16,8 +16,40 @@ const {render,renderWeekly}=dashboard;
 const chatApi=createChat({state});
 const {startFleetChat,stopFleetChat}=chatApi;
 const authApi=createAuth({state,getData:()=>data,setData:value=>{data=value},render,status,startFleetChat,stopFleetChat});
-const save=()=>{localStorage.setItem('fleetledger-data',JSON.stringify(data));render();if(state.cloudReady)authApi.syncCloud().catch(e=>status('Cloud sync error: '+e.message));};
-function status(s){$('firebaseStatus').textContent=s;$('syncBadge').textContent=state.cloudReady?'☁ Cloud Sync Active':'Local Storage · Not connected';$('syncBadge').style.background=state.cloudReady?'#d9f4e7':'#fff6e5';$('syncBadge').style.color=state.cloudReady?'#16804a':'#815600';}
+let localChangeVersion=0;
+function status(s){
+  $('firebaseStatus').textContent=s;
+  $('syncBadge').textContent=state.syncPending?'Pending sync · saved on this device':state.cloudReady?'☁ Cloud Sync Active':'Local Storage · Not connected';
+  $('syncBadge').style.background=state.syncPending?'#fff0d6':state.cloudReady?'#d9f4e7':'#fff6e5';
+  $('syncBadge').style.color=state.syncPending?'#815600':state.cloudReady?'#16804a':'#815600';
+}
+let syncInFlight=false;
+async function syncPendingChanges(){
+  if(syncInFlight||!state.user||!state.db||!state.cloudReady||!state.syncPending)return;
+  syncInFlight=true;
+  try{
+    while(state.syncPending){
+      const version=localChangeVersion;
+      await authApi.syncCloud();
+      if(version===localChangeVersion){
+        state.syncPending=false;
+        localStorage.removeItem('fleetledger-sync-pending');
+        status('All changes synced to Firebase · '+(state.user.email||'your account'));
+      }
+    }
+  }catch(e){
+    status('Pending sync · saved on this device. Will retry when connected. ('+e.message+')');
+  }finally{syncInFlight=false;}
+}
+const save=()=>{
+  localChangeVersion++;
+  localStorage.setItem('fleetledger-data',JSON.stringify(data));
+  state.syncPending=true;
+  localStorage.setItem('fleetledger-sync-pending','1');
+  render();
+  status(state.cloudReady?'Saving changes to Firebase…':'Saved on this device · waiting for cloud connection');
+  syncPendingChanges();
+};
 const download=(filename,content,type)=>{let a=document.createElement('a'),u=URL.createObjectURL(new Blob([content],{type}));a.href=u;a.download=filename;a.click();URL.revokeObjectURL(u)};
 initRecords({getData:()=>data,save});
 initDataTools({getData:()=>data,setData:value=>{data=value},save,download,render});
