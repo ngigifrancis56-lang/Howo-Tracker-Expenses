@@ -40,7 +40,6 @@ export function createAuth({state,getData,setData,render,status,startFleetChat,s
     if(!state.user||!state.db) return;
     await setDoc(doc(state.db,'users',state.user.uid,'appData','fleetledger'),getData());
     localStorage.setItem('fleetledger-cloud-owner',state.user.uid);
-    localStorage.removeItem('fleetledger-sync-pending');
     status('Synced to Firebase · '+state.user.email);
   }
 
@@ -61,6 +60,7 @@ export function createAuth({state,getData,setData,render,status,startFleetChat,s
         // Preserve edits made offline before this reload; upload them rather than
         // replacing the local copy with an older cloud snapshot.
         await syncCloud();
+        localStorage.removeItem('fleetledger-sync-pending');
       } else {
         const localHasRecords=hasLocalRecords(local);
         if(sameOwner||!localHasRecords) {
@@ -73,6 +73,7 @@ export function createAuth({state,getData,setData,render,status,startFleetChat,s
       }
     } else {
       await syncCloud();
+      localStorage.removeItem('fleetledger-sync-pending');
     }
 
     localStorage.setItem('fleetledger-data',JSON.stringify(getData()));
