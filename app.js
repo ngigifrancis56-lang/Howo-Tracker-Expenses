@@ -31,6 +31,18 @@ document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>document.querySe
 $('floatingChatButton').onclick=()=>document.querySelector('[data-tab="chat"]').click();
 render();
 authApi.initialize();
+// Retry cloud loading/synchronisation as soon as connectivity returns. Pending
+// edits remain in local storage until Firebase confirms the write.
+window.addEventListener('online',()=>{
+  if(!state.user||!state.db)return;
+  if(state.cloudReady) syncPendingChanges();
+  else authApi.reconnectCloud().then(()=>syncPendingChanges()).catch(e=>status('Cloud reconnect failed · local records are safe. Will retry. ('+e.message+')'));
+});
+window.addEventListener('focus',()=>{
+  if(!navigator.onLine||!state.user||!state.db)return;
+  if(state.cloudReady) syncPendingChanges();
+  else authApi.reconnectCloud().then(()=>syncPendingChanges()).catch(e=>status('Cloud reconnect failed · local records are safe. Will retry. ('+e.message+')'));
+});
 $('weekStart').onchange=renderWeekly;
 $('thisWeekBtn').onclick=()=>{$('weekStart').value=weekBounds(today()).from;renderWeekly()};
 
