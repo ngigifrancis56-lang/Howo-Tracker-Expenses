@@ -74,7 +74,7 @@ let db=null,auth=null,user=null,cloudReady=false;
 const blank=()=>({vehicles:[],drivers:[],trips:[],expenses:[],adjustments:[]});
 let data=JSON.parse(localStorage.getItem('fleetledger-data')||'null')||blank();
 const save=()=>{localStorage.setItem('fleetledger-data',JSON.stringify(data));render();if(cloudReady)syncCloud().catch(e=>status('Cloud sync error: '+e.message));};
-function status(s){$('firebaseStatus').textContent=s;$('syncBadge').textContent=cloudReady?'Firebase connected':'Local mode';}
+function status(s){   $('firebaseStatus').textContent=s;   $('syncBadge').textContent=cloudReady     ? '☁ Cloud Sync Active'     : 'Local Storage · Not connected';   $('syncBadge').style.background=cloudReady?'#d9f4e7':'#fff6e5';   $('syncBadge').style.color=cloudReady?'#16804a':'#815600'; }
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
 function opts(sel,arr,first){let old=sel.value;sel.innerHTML=(first?'<option value="">'+first+'</option>':'')+arr.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');if(arr.some(x=>x.id===old))sel.value=old;}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
