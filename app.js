@@ -4,7 +4,7 @@ import { createChat } from "./modules/chat.js";
 import { createAuth } from "./modules/auth.js";
 import { driverCalc, expenseTotal } from "./modules/finance.js";
 
-const state={db:null,auth:null,user:null,state.cloudReady:false,authUnsubscribe:null,authApp:null,chatUnsubscribe:null};
+const state={db:null,auth:null,user:null,cloudReady:false,authUnsubscribe:null,authApp:null,chatUnsubscribe:null};
 
 let data=JSON.parse(localStorage.getItem('fleetledger-data')||'null')||blank();
 
