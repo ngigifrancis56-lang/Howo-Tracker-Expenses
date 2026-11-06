@@ -62,4 +62,4 @@ reset();
 },{passive:true});
 window.addEventListener('touchcancel',reset,{passive:true});
 })();
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(reg=>reg.update()).catch(err=>console.warn('App update check failed:',err)));
