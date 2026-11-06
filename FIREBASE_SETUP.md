@@ -51,3 +51,14 @@ This lets each signed-in user access only their own data path. Do not use open r
 - The current sync is a single user-owned Firestore document and synchronizes on save / sign-in, not multi-user live collaboration or conflict merging. Avoid editing the same account concurrently on multiple devices until a stronger sync strategy is implemented.
 - Local data is not automatically merged into cloud data. Make a JSON backup before connecting and choose carefully when prompted.
 - Keep Firebase Authentication and Firestore rules enabled. Do not share your login password.
+
+## 6. Enable pictures in Fleet Live Chat
+
+The live chat picture feature stores image files in Firebase Storage and their download references in the `fleetChat` Firestore collection.
+
+1. In Firebase Console, open **Build → Storage** and create/enable the project's Storage bucket if it is not already set up.
+2. Open **Storage → Rules**, replace the rules with the contents of this repository's `storage.rules` file, then click **Publish**.
+3. Open **Firestore Database → Rules**, and replace the rules with the contents of this repository's `firestore.rules` file, then click **Publish**. These rules preserve per-user fleet records and allow signed-in users to read the shared chat while only allowing each sender to edit or delete their own messages.
+4. Reload Apex Logistic Group and open **Live Chat**. Choose **Attach picture**, select an image, then press **Send**. Images are limited to 5 MB each.
+
+**Billing note:** Firebase Storage availability and required billing depend on the project's bucket and Firebase plan. Check the Storage page in Firebase Console before enabling it; do not upgrade a billing plan without reviewing the costs. The app's text chat continues to work independently if Storage is not enabled.
