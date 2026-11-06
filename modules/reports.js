@@ -1,0 +1,6 @@
+import { $, money, name, table, esc } from "./utils.js";
+import { expenseTotal } from "./finance.js";
+export function initReports({getData}) {
+$('runReport').onclick=()=>{let f=$('reportFrom').value,t=$('reportTo').value,v=$('reportVehicle').value,ts=getData().trips.filter(x=>(!f||x.date>=f)&&(!t||x.date<=t)&&(!v||x.vehicleId===v)),ex=getData().expenses.filter(x=>(!f||x.date>=f)&&(!t||x.date<=t)&&(!v||x.vehicleId===v)),inc=ts.reduce((s,x)=>s+x.income,0),op=expenseTotal(ts)+ex.reduce((s,x)=>s+x.amount,0),dp=ts.reduce((s,x)=>s+x.driverPay,0);$('reportOutput').innerHTML=`<div class="grid"><div class="card metric"><small>Trips</small><strong>${ts.length}</strong></div><div class="card metric"><small>Income</small><strong>${money(inc)}</strong></div><div class="card metric"><small>Costs</small><strong>${money(op)}</strong></div><div class="card metric"><small>Net profit</small><strong class="${inc-op-dp<0?'red':'green'}">${money(inc-op-dp)}</strong></div></div><div class="section">${table(['Date','Vehicle','Driver','Material','Income','Costs','Driver pay','Net'],ts.map(x=>[x.date,name(getData().vehicles,x.vehicleId),name(getData().drivers,x.driverId),esc(x.material),money(x.income),money(x.fuel+x.otherCost),money(x.driverPay),money(x.income-x.fuel-x.otherCost-x.driverPay)]))}</div>`};
+
+}
