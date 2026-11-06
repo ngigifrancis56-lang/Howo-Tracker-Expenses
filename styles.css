@@ -135,3 +135,48 @@ table{min-width:650px}th{background:#f5f8fc;color:#52657b;font-size:11px;text-tr
 .financial-equation span{font-size:10px;color:#8391a1}
 .financial-equation b{font-size:11px;color:#64788c;font-weight:700;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 @media(max-width:760px){.financial-profit{padding:15px}.financial-rows{padding:6px 12px}.financial-row{font-size:12px}.financial-row>b{font-size:12px}.financial-equation{padding:11px 13px}}
+
+
+/* Apex Logistic Group — desktop sidebar and polished fleet dashboard */
+@media(min-width:900px){
+  body{background:radial-gradient(ellipse at 78% 0%,#e8f1ff 0,transparent 34%),#f3f6fb}
+  header#appHeader{margin-left:270px;width:calc(100% - 270px);padding:19px 30px;background:linear-gradient(110deg,#0b1f36,#123c60 65%,#1769aa);box-shadow:0 8px 26px rgba(12,35,59,.13)}
+  header#appHeader .top{max-width:none}
+  #appMain.wrap{max-width:none;margin:0 0 0 270px;width:calc(100% - 270px);padding:22px 30px 48px}
+  #appMain>.top{padding:3px 2px 14px}
+  .tabs{position:fixed;z-index:30;left:0;top:0;bottom:0;width:270px;height:100vh;margin:0;padding:18px 12px 20px;border:0;border-radius:0;background:linear-gradient(180deg,#102b4b 0%,#0c2039 100%);box-shadow:8px 0 28px rgba(8,25,45,.13);display:flex!important;flex-direction:column;align-items:stretch;gap:7px;overflow-x:hidden;overflow-y:auto;scrollbar-width:thin}
+  .tabs:before{content:"🚚  APEX LOGISTIC\A       GROUP";white-space:pre;display:block;color:#fff;font-size:21px;line-height:1.35;font-weight:900;letter-spacing:-.04em;padding:8px 10px 26px;margin-bottom:5px;border-bottom:1px solid rgba(255,255,255,.13)}
+  .tabs:after{content:"DRIVE SMARTER,\A EARN MORE";white-space:pre;display:block;margin-top:auto;padding:18px 12px;border:1px solid rgba(255,190,50,.65);border-radius:14px;color:#ffc247;text-align:center;font-size:13px;font-weight:850;line-height:1.6}
+  .tabs button{flex:none;width:100%;min-height:48px;display:flex;align-items:center;gap:13px;text-align:left;white-space:normal;padding:10px 13px;border:1px solid transparent;border-radius:11px;background:transparent;color:#e5eef8;font-size:14px;font-weight:700;box-shadow:none}
+  .tabs button:before{width:24px;flex:none;text-align:center;font-size:18px;line-height:1}
+  .tabs button:nth-child(1):before{content:"▦"}
+  .tabs button:nth-child(2):before{content:"🚚"}
+  .tabs button:nth-child(3):before{content:"♙"}
+  .tabs button:nth-child(4):before{content:"▤"}
+  .tabs button:nth-child(5):before{content:"🚛"}
+  .tabs button:nth-child(6):before{content:"▥"}
+  .tabs button:nth-child(7):before{content:"⚙"}
+  .tabs button:nth-child(8):before{content:"☁"}
+  .tabs button:hover{background:rgba(255,255,255,.09);color:#fff}
+  .tabs button.active{background:linear-gradient(100deg,#0878f9,#1769d2);border-color:#2688ff;color:#fff;box-shadow:0 7px 18px rgba(0,100,230,.25)}
+  .dashboard-panel{gap:18px!important}
+  .dashboard-metrics .metric{min-height:120px;padding:20px;background:linear-gradient(145deg,#fff,#f7faff)}
+  .dashboard-metrics .metric:nth-child(1){border-color:#cfe2ff;background:linear-gradient(145deg,#eaf3ff,#fff)}
+  .dashboard-metrics .metric:nth-child(2){border-color:#cceedd;background:linear-gradient(145deg,#e8f8ef,#fff)}
+  .dashboard-metrics .metric:nth-child(3){border-color:#f5dfbd;background:linear-gradient(145deg,#fff3df,#fff)}
+  .dashboard-metrics .metric:nth-child(4){border-color:#ded8ff;background:linear-gradient(145deg,#f0edff,#fff)}
+  .dashboard-two-col{grid-template-columns:1.1fr .9fr}
+  .weekly-card{border-color:#dfe8f2}
+}
+@media(max-width:899px){
+  header#appHeader{margin-left:0;width:100%}
+  #appMain.wrap{margin:0;width:100%}
+  .tabs{position:sticky;top:0;z-index:18}
+  .tabs button{flex:none}
+}
+@media(max-width:600px){
+  header#appHeader{padding:17px 14px;padding-top:calc(17px + env(safe-area-inset-top))}
+  header#appHeader h1{font-size:21px}
+  #appMain>.top{gap:8px}
+  .tabs{background:rgba(255,255,255,.96)}
+}
