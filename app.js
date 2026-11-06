@@ -20,7 +20,7 @@ const save=()=>{localStorage.setItem('fleetledger-data',JSON.stringify(data));re
 function status(s){$('firebaseStatus').textContent=s;$('syncBadge').textContent=state.cloudReady?'☁ Cloud Sync Active':'Local Storage · Not connected';$('syncBadge').style.background=state.cloudReady?'#d9f4e7':'#fff6e5';$('syncBadge').style.color=state.cloudReady?'#16804a':'#815600';}
 const download=(filename,content,type)=>{let a=document.createElement('a'),u=URL.createObjectURL(new Blob([content],{type}));a.href=u;a.download=filename;a.click();URL.revokeObjectURL(u)};
 initRecords({getData:()=>data,save});
-initDataTools({getData:()=>data,setData:value=>{data=value},save,download});
+initDataTools({getData:()=>data,setData:value=>{data=value},save,download,render});
 initReports({getData:()=>data});
 
 
@@ -29,12 +29,6 @@ initReports({getData:()=>data});
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('.panel').forEach(x=>x.classList.toggle('active',x.id===b.dataset.tab));render()});
 document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>document.querySelector(`[data-tab="${b.dataset.go}"]`).click());
 $('floatingChatButton').onclick=()=>document.querySelector('[data-tab="chat"]').click();
-function download(filename,content,type){let a=document.createElement('a'),u=URL.createObjectURL(new Blob([content],{type}));a.href=u;a.download=filename;a.click();URL.revokeObjectURL(u)}
-function backup(){download('fleetledger-backup-'+today()+'.json',JSON.stringify(data,null,2),'application/json')}
-$('backupBtn').onclick=backup;$('backupBtn2').onclick=backup;$('exportBtn').onclick=()=>{let rows=[['date','vehicle','driver','material','quantity','unit','customer','destination','income','fuel','other_cost','driver_pay','notes'],...data.trips.map(t=>[t.date,name(data.vehicles,t.vehicleId),name(data.drivers,t.driverId),t.material,t.quantity,t.unit,t.customer,t.destination,t.income,t.fuel,t.otherCost,t.driverPay,t.notes])];download('fleetledger-trips-'+today()+'.csv',rows.map(r=>r.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')).join('\n'),'text/csv')};
-$('restoreFile').onchange=async e=>{try{let d=JSON.parse(await e.target.files[0].text());if(!d.vehicles||!d.drivers||!d.trips)throw Error('Invalid backup');if(confirm('Replace current records with this backup?')){data={...blank(),...d};save();alert('Backup restored')}}catch(err){alert('Could not restore: '+err.message)}};
-$('clearData').onclick=()=>{if(confirm('Permanently delete all local app records? Download a backup first.')){data=blank();save()}};
-$('tripFilterDate').onchange=render;$('tripFilterVehicle').onchange=render;
 render();
 authApi.initialize();
 $('weekStart').onchange=renderWeekly;
