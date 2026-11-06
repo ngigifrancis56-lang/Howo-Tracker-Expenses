@@ -99,4 +99,5 @@ tailwind.config={theme:{extend:{colors:{fleet:{navy:'#102a43',blue:'#1769aa',min
 </main>
 <button class="floating-chat" id="floatingChatButton" type="button" aria-label="Open fleet live chat" title="Open fleet live chat"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H6l-3 2v-5.5A7.5 7.5 0 1 1 20 11.5Z" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 11.5h.01M12 11.5h.01M16 11.5h.01" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg><span>Chat</span></button>
 <script type="module" src="./app.js"></script>
+<script type="module">import { initDailyTripReminder } from "./modules/reminders.js"; initDailyTripReminder();</script>
 </body></html>
