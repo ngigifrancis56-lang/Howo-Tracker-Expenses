@@ -62,6 +62,70 @@ table{min-width:650px}th{background:#f5f8fc;color:#52657b;font-size:11px;text-tr
 @media(max-width:760px){#appMain.wrap{padding:14px 12px 32px}.tabs{margin-left:-2px;margin-right:-2px;border-radius:14px;padding:8px}.tabs button{padding:9px 12px;font-size:12px}.card,.box{padding:14px;border-radius:16px}.metric{min-height:102px}.metric strong{font-size:21px}.grid{gap:10px}.top{align-items:flex-start}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{transition:none!important}}
 
+
+/* Dashboard declutter: clearer hierarchy, fewer simultaneous details */
+.dashboard-panel{gap:22px!important}
+.dashboard-intro{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:5px 3px 0}
+.dashboard-eyebrow,.dashboard-kicker{display:block;color:#6b8298;font-size:10px;font-weight:850;letter-spacing:.14em}
+.dashboard-heading{font-size:25px;margin:5px 0 3px;font-weight:850;letter-spacing:-.04em}
+.dashboard-intro .muted,.weekly-heading .muted{margin:0;font-size:13px}
+.dashboard-live,.week-pill{display:inline-flex;align-items:center;gap:7px;border:1px solid #dceee6;background:#f0faf5;color:#23734f;border-radius:30px;padding:8px 12px;font-size:11px;font-weight:800;white-space:nowrap}
+.dashboard-live i{width:7px;height:7px;background:#20a36b;border-radius:50%;box-shadow:0 0 0 4px #20a36b20}
+.dashboard-metrics,.dashboard-week-metrics{gap:12px}
+.dashboard-metrics .metric,.dashboard-week-metrics .metric{min-height:105px;padding:17px}
+.dashboard-metrics .metric:after,.dashboard-week-metrics .metric:after{width:65px;height:65px;right:-20px;top:-23px}
+.dashboard-metrics .profit-card,.dashboard-week-metrics .profit-card{background:linear-gradient(145deg,#f0faf5,#fff);border-color:#d8eee2}
+.dashboard-two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.dashboard-section-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:17px}
+.dashboard-section-title h2{margin:4px 0 0}
+.dashboard-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:#edf5fc;color:#1769aa;font-size:20px}
+.activity-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.activity-stats>div{background:#f6f9fc;border:1px solid #edf1f6;border-radius:14px;padding:14px}
+.activity-stats strong{display:block;font-size:25px;font-weight:850;color:#173c5c}
+.activity-stats span{display:block;margin-top:3px;color:#64748b;font-size:12px}
+.dashboard-subsection{margin-top:20px;padding-top:17px;border-top:1px solid #edf1f6}
+.dashboard-subsection h3{margin-bottom:10px}
+.dashboard-breakdown .notice{margin-top:15px}
+.weekly-card{padding:21px}
+.weekly-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}
+.weekly-heading h2{margin:4px 0}
+.week-pill{background:#eef5fc;border-color:#dfebf6;color:#345d7d}
+.week-controls{display:flex;align-items:end;gap:12px;max-width:490px}
+.week-controls .field{flex:1;margin:0}
+.week-controls button{white-space:nowrap;margin-bottom:0}
+.weekly-card>.notice{margin:14px 0}
+.dashboard-week-metrics{grid-template-columns:repeat(4,minmax(0,1fr))}
+.dashboard-details{border:1px solid #e6edf4;border-radius:15px;padding:0 15px;background:#fbfcfe}
+.dashboard-details>summary{display:flex;align-items:center;gap:10px;min-height:52px;cursor:pointer;list-style:none;font-weight:800;color:#24425e}
+.dashboard-details>summary::-webkit-details-marker{display:none}
+.dashboard-details>summary:after{content:'＋';margin-left:auto;color:#1769aa;font-size:18px}
+.dashboard-details[open]>summary:after{content:'−'}
+.dashboard-details>summary span{font-size:11px;font-weight:500;color:#8291a2}
+.dashboard-extra-metrics{padding:5px 0 15px;gap:10px}
+.dashboard-extra-metrics .metric{min-height:88px;padding:13px}
+.dashboard-extra-metrics .metric strong{font-size:19px}
+.weekly-records{margin-top:14px;padding:0 17px 14px}
+.dashboard-report-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:12px 0}
+.dashboard-report-grid h3{margin:0 0 10px}
+.weekly-records .dashboard-subsection{margin-top:12px}
+.latest-trips{margin-top:0}
+.latest-trips>button{margin-top:12px}
+.details-action{margin-left:auto;color:#1769aa;font-size:11px}
+.dashboard-details[open]>summary .details-action{display:none}
+@media(max-width:760px){
+ .dashboard-panel{gap:15px!important}.dashboard-intro{align-items:flex-start}.dashboard-heading{font-size:22px}
+ .dashboard-two-col,.dashboard-report-grid{grid-template-columns:1fr}
+ .dashboard-metrics,.dashboard-week-metrics{gap:9px}
+ .dashboard-metrics .metric,.dashboard-week-metrics .metric{min-height:94px;padding:13px}
+ .dashboard-metrics .metric small,.dashboard-week-metrics .metric small{font-size:10px}
+ .dashboard-metrics .metric strong,.dashboard-week-metrics .metric strong{font-size:19px}
+ .weekly-card{padding:15px}.week-controls{max-width:none}
+ .dashboard-details>summary{flex-wrap:wrap;gap:6px;padding:10px 0}
+ .dashboard-details>summary span{width:100%;order:3}
+ .details-action{margin-left:0}
+}
+@media(max-width:380px){.dashboard-live{font-size:10px;padding:7px 9px}.week-controls{align-items:stretch;flex-direction:column}.week-controls button{align-self:flex-start}}
+
 </style>
 </head>
 <body>\n<div id="pullRefreshIndicator" class="pull-refresh-indicator" aria-live="polite">↓ Pull down to refresh</div>
@@ -72,41 +136,42 @@ table{min-width:650px}th{background:#f5f8fc;color:#52657b;font-size:11px;text-tr
 <nav class="tabs flex items-center gap-2 overflow-x-auto" aria-label="Main navigation">
 <button class="active" data-tab="dashboard">Dashboard</button><button data-tab="trips">Trips</button><button data-tab="drivers">Drivers & Pay</button><button data-tab="expenses">Expenses</button><button data-tab="fleet">Vehicles</button><button data-tab="reports">Reports</button><button data-tab="settings">Firebase & Settings</button><button data-tab="chat">Live Chat</button>
 </nav>
-<section class="panel active space-y-5" id="dashboard">
-<div class="grid">
+<section class="panel active dashboard-panel space-y-6" id="dashboard">
+<div class="dashboard-intro"><div><span class="dashboard-eyebrow">FLEET OVERVIEW</span><h2 class="dashboard-heading">Today's performance</h2><p class="muted">A clear snapshot of your fleet's money and activity.</p></div><span class="dashboard-live"><i></i> Live overview</span></div>
+<div class="grid dashboard-metrics">
 <div class="card metric"><small>Today's income</small><strong id="mIncome">KSh 0</strong></div>
 <div class="card metric"><small>Operating expenses</small><strong id="mExpense">KSh 0</strong></div>
 <div class="card metric"><small>Driver pay earned</small><strong id="mPay">KSh 0</strong></div>
-<div class="card metric"><small>Net profit</small><strong class="green" id="mProfit">KSh 0</strong></div>
+<div class="card metric profit-card"><small>Net profit</small><strong class="green" id="mProfit">KSh 0</strong></div>
 </div>
-<div class="cols section"><div class="box"><h2>Today's activity</h2><div class="grid" style="grid-template-columns:repeat(2,1fr)"><div><div class="muted">Trips completed</div><strong id="tripCount">0</strong></div><div><div class="muted">Loads / quantities</div><strong id="loadCount">0</strong></div></div><div class="section" id="materialSummary"></div></div>
-<div class="box"><h2>Daily breakdown</h2><div id="dailyBreakdown"></div><div class="notice">Net profit = trip income − operating expenses − driver pay earned. Advances are cash already paid to drivers; they are not counted twice as an expense.</div></div></div>
-<div class="section"><div class="top"><div><h2>Weekly earnings</h2><p class="muted">Your weekly totals and breakdown, shown right here on the Dashboard.</p></div><span class="pill">Monday – Sunday</span></div>
-<div class="box">
-<div class="top"><div><h2>Weekly earnings dashboard</h2><p class="muted">Weekly totals from recorded trips, expenses and driver payments.</p></div><span class="pill">Monday – Sunday</span></div>
-<div class="row"><div class="field"><label for="weekStart">Choose any date in the week</label><input id="weekStart" type="date"></div><div class="field" style="align-self:end"><button class="btn secondary" id="thisWeekBtn" type="button">This week</button></div></div>
+<div class="dashboard-two-col">
+<div class="box dashboard-activity"><div class="dashboard-section-title"><div><span class="dashboard-kicker">ACTIVITY</span><h2>Today's activity</h2></div><span class="dashboard-icon">↗</span></div>
+<div class="activity-stats"><div><strong id="tripCount">0</strong><span>Trips completed</span></div><div><strong id="loadCount">0</strong><span>Loads / quantities</span></div></div>
+<div class="dashboard-subsection"><h3>Materials moved</h3><div id="materialSummary"></div></div></div>
+<div class="box dashboard-breakdown"><div class="dashboard-section-title"><div><span class="dashboard-kicker">MONEY IN / OUT</span><h2>Daily breakdown</h2></div><span class="dashboard-icon">◎</span></div><div id="dailyBreakdown"></div><div class="notice">Net profit = trip income − operating expenses − driver pay earned.</div></div>
+</div>
+<div class="box weekly-card"><div class="weekly-heading"><div><span class="dashboard-kicker">WEEKLY PERFORMANCE</span><h2>Weekly earnings</h2><p class="muted">Your fleet's totals for the selected week.</p></div><span class="week-pill">MON – SUN</span></div>
+<div class="week-controls"><div class="field"><label for="weekStart">Choose a date in the week</label><input id="weekStart" type="date"></div><button class="btn secondary" id="thisWeekBtn" type="button">This week</button></div>
 <div class="notice" id="weekRangeLabel">Select a week to view its performance.</div>
-<div class="grid">
-<div class="card metric"><small>Weekly trip income</small><strong id="wIncome">KSh 0</strong></div>
+<div class="grid dashboard-week-metrics">
+<div class="card metric"><small>Weekly income</small><strong id="wIncome">KSh 0</strong></div>
 <div class="card metric"><small>Operating expenses</small><strong id="wExpenses">KSh 0</strong></div>
-<div class="card metric"><small>Drivers’ pay earned</small><strong id="wPay">KSh 0</strong></div>
-<div class="card metric"><small>Weekly net profit</small><strong id="wProfit" class="green">KSh 0</strong></div>
+<div class="card metric"><small>Drivers’ pay</small><strong id="wPay">KSh 0</strong></div>
+<div class="card metric profit-card"><small>Weekly net profit</small><strong id="wProfit" class="green">KSh 0</strong></div>
 </div>
-<div class="grid section">
+<details class="dashboard-details"><summary>More weekly figures <span>Trips, fuel costs and average income</span></summary><div class="grid dashboard-extra-metrics">
 <div class="card metric"><small>Trips completed</small><strong id="wTrips">0</strong></div>
 <div class="card metric"><small>Other expenses</small><strong id="wOtherExpenses">KSh 0</strong></div>
 <div class="card metric"><small>Fuel & trip costs</small><strong id="wTripCosts">KSh 0</strong></div>
 <div class="card metric"><small>Average income per trip</small><strong id="wAverage">KSh 0</strong></div>
+</div></details>
 </div>
-</div>
-<div class="cols section">
-<div class="box"><h2>Daily earnings & profit</h2><div class="tablewrap" id="weeklyDailyTable"></div></div>
-<div class="box"><h2>Weekly financial summary</h2><div id="weeklyBreakdown"></div><div class="notice">Net profit = trip income − fuel and trip costs − other business expenses − driver pay earned. Advances and settlements are cash movements and are not deducted twice.</div></div>
-</div>
-<div class="box section"><h2>Driver pay for the week</h2><p class="muted">Pay earned is based on trip dates. Advances, deductions and settlements are shown separately for the selected week.</p><div class="tablewrap" id="weeklyDriverTable"></div></div>
-<div class="box section"><h2>Weekly trip register</h2><div class="tablewrap" id="weeklyTripTable"></div></div>
-</div>
-<div class="box section"><div class="top"><h2>Latest trips</h2><button class="btn small" data-go="trips">Add / view trips</button></div><div class="tablewrap" id="recentTrips"></div></div>
+<details class="box dashboard-details weekly-records"><summary>View weekly reports <span>Daily earnings, driver pay and trip register</span></summary>
+<div class="dashboard-report-grid"><div><h3>Daily earnings & profit</h3><div class="tablewrap" id="weeklyDailyTable"></div></div><div><h3>Weekly financial summary</h3><div id="weeklyBreakdown"></div><div class="notice">Advances and settlements are cash movements and are not deducted twice.</div></div></div>
+<div class="dashboard-subsection"><h3>Driver pay for the week</h3><p class="muted">Pay earned is based on trip dates. Advances, deductions and settlements are shown separately.</p><div class="tablewrap" id="weeklyDriverTable"></div></div>
+<div class="dashboard-subsection"><h3>Weekly trip register</h3><div class="tablewrap" id="weeklyTripTable"></div></div>
+</details>
+<details class="box dashboard-details latest-trips"><summary>Latest trips <span>Recent entries from your fleet</span><b class="details-action">Open trips</b></summary><div class="tablewrap" id="recentTrips"></div><button class="btn small" data-go="trips">Add / view trips</button></details>
 </section>
 <section class="panel space-y-5" id="chat"><div class="box"><div class="top"><div><h2>Fleet Live Chat</h2><p class="muted">Messages are shared with every signed-in user of this tracker.</p></div><span class="pill" id="chatStatus">Connecting…</span></div><div id="chatMessages" class="chat-messages" aria-live="polite"><div class="empty">Loading messages…</div></div><form id="chatForm" class="chat-compose"><div class="field"><label for="chatInput">Your message</label><textarea id="chatInput" rows="2" maxlength="2000" placeholder="Write a message to the fleet…" required></textarea></div><button class="btn" id="chatSend" type="submit">Send message</button></form><p class="muted">Please avoid sharing passwords, payment PINs or other sensitive information in chat.</p></div></section>
 <section class="panel space-y-5" id="trips">
