@@ -61,14 +61,15 @@ export function createAuth({state,getData,setData,render,status,startFleetChat,s
         // Preserve edits made offline before this reload; upload them rather than
         // replacing the local copy with an older cloud snapshot.
         await syncCloud();
-      } else
-      const localHasRecords=hasLocalRecords(local);
-      if(sameOwner||!localHasRecords) {
-        setData({...blank(),...remote});
       } else {
-        const useCloud=confirm('Firebase records were found for this account. OK = load the cloud records on this device. Cancel = keep this device records and upload them to the cloud.');
-        if(useCloud) setData({...blank(),...remote});
-        else await syncCloud();
+        const localHasRecords=hasLocalRecords(local);
+        if(sameOwner||!localHasRecords) {
+          setData({...blank(),...remote});
+        } else {
+          const useCloud=confirm('Firebase records were found for this account. OK = load the cloud records on this device. Cancel = keep this device records and upload them to the cloud.');
+          if(useCloud) setData({...blank(),...remote});
+          else await syncCloud();
+        }
       }
     } else {
       await syncCloud();
