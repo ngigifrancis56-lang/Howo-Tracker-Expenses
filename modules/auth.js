@@ -85,7 +85,7 @@ export function createAuth({state,getData,setData,render,status,startFleetChat,s
       statusNode.textContent='Could not check master PIN status: '+(err.message||'Unknown error');
     }
   }
-  async function requestDeletionAuthorization() {
+  async function requestDeletionAuthorization(collection,recordId) {
     if(!state.user||!state.functions) {
       alert('Connect to the cloud before deleting records. Your record has not been changed.');
       return null;
@@ -93,7 +93,7 @@ export function createAuth({state,getData,setData,render,status,startFleetChat,s
     const pin=prompt('Enter the company master PIN to authorise this deletion:');
     if(pin===null)return null;
     try {
-      const result=await httpsCallable(state.functions,'authorizeDeletion')({pin});
+      const result=await httpsCallable(state.functions,'authorizeDeletion')({pin,collection,recordId});
       return result.data?.authorizationToken||null;
     } catch(err) {
       alert((err.message||'PIN authorisation failed.')+' No record was deleted.');
