@@ -237,7 +237,14 @@ export function createAuth({state,getData,setData,save,render,status,startFleetC
     try{const cfg={apiKey:$('fbApiKey').value.trim(),authDomain:$('fbAuthDomain').value.trim(),projectId:$('fbProjectId').value.trim(),storageBucket:$('fbBucket').value.trim(),messagingSenderId:$('fbSender').value.trim(),appId:$('fbAppId').value.trim()};if(!cfg.apiKey||!cfg.projectId||!cfg.appId)throw new Error('Enter API key, Project ID and App ID.');if(cfg.projectId!=='how-expense-tracker')throw new Error('Use the existing How Expense Tracker Firebase project.');localStorage.setItem('fleetledger-firebase-config',JSON.stringify(cfg));await prepareFirebase(cfg);alert('Firebase settings saved. Sign in to connect shared company records.');}
     catch(err){alert(err.message);}
   };
-  $('signOut').onclick=async()=>{if(state.auth)await fbSignOut(state.auth);state.user=null;state.cloudReady=false;if(sharedUnsubscribe){sharedUnsubscribe();sharedUnsubscribe=null;}stopFleetChat();showLogin('You have signed out.');};
+  async function signOutCurrent(message="You have signed out.") {
+    if(state.auth)await fbSignOut(state.auth);
+    state.user=null;state.membership=null;state.cloudReady=false;document.body.classList.remove("role-staff");
+    if(sharedUnsubscribe){sharedUnsubscribe();sharedUnsubscribe=null;}
+    stopFleetChat();showLogin(message);
+  }
+  $('signOut').onclick=()=>signOutCurrent();
+  $('accessSignOut').onclick=()=>signOutCurrent("Signed out. You can now use a different account.");
   async function reconnectCloud(){if(!state.user||!state.db)return;if(state.membership?.status!=="active")throw new Error("This account is not approved for fleet access.");await loadCloud();state.cloudReady=true;status('Connected as '+(state.user.email||'fleet user')+' · shared cloud sync active');}
   function initialize(){
     try{const c=JSON.parse(localStorage.getItem('fleetledger-firebase-config')||'null');if(c){$('fbApiKey').value=c.apiKey||'';$('fbAuthDomain').value=c.authDomain||'';$('fbProjectId').value=c.projectId||'';$('fbBucket').value=c.storageBucket||'';$('fbSender').value=c.messagingSenderId||'';$('fbAppId').value=c.appId||'';status('Checking your saved Firebase session…');prepareFirebase(c).catch(err=>{state.cloudReady=false;console.error('Firebase init failed:',err);showLogin('Could not initialise Firebase: '+err.message);status('Firebase unavailable · local records preserved');});}else showLogin('Connect Firebase and sign in to access your fleet records.');}
