@@ -36,9 +36,13 @@ async function syncPendingChanges(){
         await authApi.syncCloud(pendingDeletionAuthorizationToken);
         pendingDeletionAuthorizationToken='';
         localStorage.removeItem('fleetledger-deletion-auth-token');
+        localStorage.removeItem('fleetledger-pending-delete-collection');
+        localStorage.removeItem('fleetledger-pending-delete-id');
       } catch(error) {
         if(error.code==='functions/permission-denied') {
-          const replacement=await authApi.requestDeletionAuthorization();
+          const collection=localStorage.getItem('fleetledger-pending-delete-collection');
+          const recordId=localStorage.getItem('fleetledger-pending-delete-id');
+          const replacement=await authApi.requestDeletionAuthorization(collection,recordId);
           if(replacement) {
             pendingDeletionAuthorizationToken=replacement;
             localStorage.setItem('fleetledger-deletion-auth-token',replacement);
@@ -58,7 +62,7 @@ async function syncPendingChanges(){
   }finally{syncInFlight=false;}
 }
 const save=(options={})=>{
-  if(options.authorizationToken){pendingDeletionAuthorizationToken=options.authorizationToken;localStorage.setItem('fleetledger-deletion-auth-token',pendingDeletionAuthorizationToken);}
+  if(options.authorizationToken){pendingDeletionAuthorizationToken=options.authorizationToken;localStorage.setItem('fleetledger-deletion-auth-token',pendingDeletionAuthorizationToken);localStorage.setItem('fleetledger-pending-delete-collection',options.deletionCollection||'');localStorage.setItem('fleetledger-pending-delete-id',options.deletionRecordId||'');}
   // Stamp changed records and keep deletion tombstones so another device cannot
   // silently resurrect a deleted item or overwrite a newer edit.
   const keys=['vehicles','drivers','trips','expenses','adjustments'];
