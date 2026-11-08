@@ -10,6 +10,7 @@ function settlementBounds(value){const b=weekBounds(value||today()),sat=dateFrom
 function updateSettlement(){
   const driverId=$('settlementDriver').value,period=settlementBounds($('settlementWeek').value);
   if($('settlementDate').dataset.auto!=='false')$('settlementDate').value=period.saturday;
+  $('settlementDate').min=period.from;$('settlementDate').max=period.to;
   $('settlementPeriod').textContent='Pay period: Monday '+period.from+' to Saturday '+period.to+'.';
   const data=getData(),trips=data.trips.filter(t=>t.driverId===driverId&&t.date>=period.from&&t.date<=period.to);
   const tx=data.adjustments.filter(a=>a.driverId===driverId&&a.date>=period.from&&a.date<=period.to);
