@@ -43,7 +43,12 @@ async function syncPendingChanges(){
   }finally{syncInFlight=false;}
 }
 function save(options={}){
-  if(options.deletedRecord){\n    data._deletionAudit=Array.isArray(data._deletionAudit)?data._deletionAudit:[];\n    data._deletionAudit.push({id:uid(),deletedAt:new Date().toISOString(),deletedBy:state.user?.email||'Local user',...options.deletedRecord});\n    data._deletionAudit=data._deletionAudit.slice(-100);\n  }\n  // Stamp changed records and keep deletion tombstones so another device cannot
+  if(options.deletedRecord){
+    data._deletionAudit=Array.isArray(data._deletionAudit)?data._deletionAudit:[];
+    data._deletionAudit.push({id:uid(),deletedAt:new Date().toISOString(),deletedBy:state.user?.email||'Local user',...options.deletedRecord});
+    data._deletionAudit=data._deletionAudit.slice(-100);
+  }
+  // Stamp changed records and keep deletion tombstones so another device cannot
   // silently resurrect a deleted item or overwrite a newer edit.
   const keys=['vehicles','drivers','trips','expenses','adjustments'];
   data._syncMeta=data._syncMeta||{};
