@@ -147,6 +147,7 @@ export function createAuth({state,getData,setData,render,status,startFleetChat,s
       status('Restoring shared company records…');
       try{
         await loadCloud();
+        await refreshMasterPinStatus();
         if(run!==sessionRun||state.user?.uid!==current.uid)return;
         state.cloudReady=true;status('Connected as '+current.email+' · shared cloud sync active');
       }catch(err){
