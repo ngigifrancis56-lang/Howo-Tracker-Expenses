@@ -99,7 +99,12 @@ exports.setMasterPin = onCall(async (request) => {
 exports.authorizeDeletion = onCall(async (request) => {
   const user = requireUser(request);
   const pin = request.data?.pin;
+  const collection = request.data?.collection;
+  const recordId = request.data?.recordId;
   if (!validPin(pin)) throw new HttpsError("invalid-argument", "Enter the 6 to 12 digit master PIN.");
+  if (!RECORD_KEYS.includes(collection) || typeof recordId !== "string" || !recordId || recordId.length > 160) {
+    throw new HttpsError("invalid-argument", "A specific record must be selected for deletion.");
+  }
 
   const pinRef = ref([...SECURITY, "masterPin"]);
   const attemptRef = ref([...SECURITY, "pinAttempts", user.uid]);
@@ -131,6 +136,8 @@ exports.authorizeDeletion = onCall(async (request) => {
     tx.set(attemptRef, { attempts: 0, lockedUntil: null, updatedAt: FieldValue.serverTimestamp() });
     tx.create(tokenRef, {
       uid: user.uid,
+      collection,
+      recordId,
       createdAt: FieldValue.serverTimestamp(),
       expiresAt: Timestamp.fromMillis(now + AUTH_WINDOW_MS)
     });
@@ -170,6 +177,9 @@ exports.syncCompanyData = onCall(async (request) => {
       const authData = tokenSnap.exists ? tokenSnap.data() : null;
       if (!authData || authData.uid !== user.uid || !authData.expiresAt || authData.expiresAt.toMillis() <= Date.now()) {
         throw new HttpsError("permission-denied", "Deletion authorisation is missing or expired. No records were deleted.");
+      }
+      if (removed.length !== 1 || removed[0].collection !== authData.collection || removed[0].id !== authData.recordId) {
+        throw new HttpsError("permission-denied", "This PIN approval applies only to the selected record. No records were deleted.");
       }
     }
 
