@@ -16,7 +16,7 @@ service cloud.firestore {
     function canManageFleet() { return hasActiveMembership() && memberRole() in ['admin','manager']; }
     function firstAdminBootstrap() {
       return signedIn()
-        && request.auth.uid == resource.id
+        && request.resource.data.uid == request.auth.uid
         && request.auth.token.email == 'ngigifrancis56@gmail.com'
         && request.auth.token.email_verified == true
         && request.resource.data.role == 'admin'
