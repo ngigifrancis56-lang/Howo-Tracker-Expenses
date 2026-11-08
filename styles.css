@@ -201,3 +201,22 @@ table{min-width:650px}th{background:#f5f8fc;color:#52657b;font-size:11px;text-tr
   72%{transform:translateX(0) rotate(0)}
 }
 @media(prefers-reduced-motion:reduce){.brand-truck{animation:none}}
+
+
+/* Expandable trip register */
+.trip-list{display:grid;gap:10px}
+.trip-item{border:1px solid var(--line);border-radius:13px;background:#fff;overflow:hidden}
+.trip-summary{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:15px 16px;cursor:pointer;list-style:none}
+.trip-summary::-webkit-details-marker{display:none}
+.trip-heading{display:flex;flex-direction:column;gap:5px;min-width:0}
+.trip-heading strong{font-size:14px;color:var(--navy)}
+.trip-heading small{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.trip-view-label{flex:none;display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:9px;background:#eaf2f8;color:var(--navy);font-size:12px;font-weight:750}
+.trip-item[open] .trip-view-label span{transform:rotate(180deg)}
+.trip-detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;padding:15px 16px;border-top:1px solid var(--line);background:#fbfcfe}
+.trip-detail-grid>div{display:flex;flex-direction:column;gap:5px;min-width:0}
+.trip-detail-grid small{font-size:11px;color:var(--muted)}
+.trip-detail-grid strong{font-size:13px;font-weight:650;overflow-wrap:anywhere}
+.trip-detail-grid .trip-notes{grid-column:1/-1}
+.trip-manage{justify-content:flex-end;padding:0 16px 15px;background:#fbfcfe}
+@media(max-width:600px){.trip-summary{padding:13px 12px}.trip-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:13px 12px}.trip-manage{padding:0 12px 13px}}
