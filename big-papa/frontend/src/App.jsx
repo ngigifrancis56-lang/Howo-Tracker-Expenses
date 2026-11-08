@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import TripManager from './TripManager';
 import ReportManager from './ReportManager';
+import {getCache,putCache} from './offlineStore';
 import { FileText, Truck, LockKeyhole, Mail, UserRound, ArrowRight, ShieldCheck, Users, Plus, Search, LogOut, Pencil, Trash2, X, LayoutDashboard, CarFront, CircleUserRound, RefreshCw } from 'lucide-react';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8080';
@@ -13,7 +14,7 @@ export default function App() {
   const [busy,setBusy]=useState(false),[error,setError]=useState(''),[session,setSession]=useState(()=>{try{return JSON.parse(localStorage.getItem('bigpapa-session')||'null')}catch{return null}});
   const [tab,setTab]=useState('overview'),[vehicles,setVehicles]=useState([]),[drivers,setDrivers]=useState([]);
   const [query,setQuery]=useState(''),[modal,setModal]=useState(''),[editing,setEditing]=useState(null),[record,setRecord]=useState(emptyVehicle),[notice,setNotice]=useState('');
-  const [loading,setLoading]=useState(false);
+  const [loading,setLoading]=useState(false),[online,setOnline]=useState(navigator.onLine);
   const headers=()=>({Authorization:'Bearer '+session?.token,'Content-Type':'application/json'});
   async function api(path,options={}) {
     const res=await fetch(API+path,{...options,headers:{...headers(),...(options.headers||{})}});
@@ -24,10 +25,13 @@ export default function App() {
   }
   async function loadFleet(){
     if(!session?.token)return;setLoading(true);setError('');
-    try{const [v,d]=await Promise.all([api('/api/vehicles'),api('/api/drivers')]);setVehicles(v);setDrivers(d);}
-    catch(e){setError(e.message);}
+    const cached=await Promise.all([getCache('vehicles'),getCache('drivers')]).catch(()=>[null,null]);
+    if(cached[0])setVehicles(cached[0]);if(cached[1])setDrivers(cached[1]);
+    try{const [v,d]=await Promise.all([api('/api/vehicles'),api('/api/drivers')]);setVehicles(v);setDrivers(d);await Promise.all([putCache('vehicles',v),putCache('drivers',d)]);}
+    catch(e){if(!cached[0]&&!cached[1])setError(e.message);}
     finally{setLoading(false);}
   }
+  useEffect(()=>{if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});const on=()=>setOnline(true),off=()=>setOnline(false);window.addEventListener('online',on);window.addEventListener('offline',off);return()=>{window.removeEventListener('online',on);window.removeEventListener('offline',off);};},[]);
   useEffect(()=>{if(session?.token){localStorage.setItem('bigpapa-session',JSON.stringify(session));loadFleet();}else localStorage.removeItem('bigpapa-session');},[session?.token]);
   const update=(e)=>setForm({...form,[e.target.name]:e.target.value});
   async function submit(e){e.preventDefault();setBusy(true);setError('');try{const res=await fetch(API+'/api/auth/'+(mode==='login'?'login':'register'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(form)});const data=await res.json();if(!res.ok)throw new Error(data.message||'Unable to continue');setSession(data);}catch(err){setError(err.message||'Cannot reach Big Papa server.');}finally{setBusy(false);}}
