@@ -185,11 +185,12 @@ export function createAuth({state,getData,setData,save,render,status,startFleetC
     catch(err){console.warn('Local auth persistence unavailable; trying IndexedDB.',err);await setPersistence(state.auth,indexedDBLocalPersistence);}
     if(!state.authUnsubscribe) state.authUnsubscribe=onAuthStateChanged(state.auth,async current=>{
       const run=++sessionRun; state.user=current;
-      if(!current){state.cloudReady=false;if(sharedUnsubscribe){sharedUnsubscribe();sharedUnsubscribe=null;}stopFleetChat();showLogin();status('Not signed in · sign in to reconnect cloud sync');return;}
+      if(!current){state.membership=null;document.body.classList.remove("role-staff");state.cloudReady=false;if(sharedUnsubscribe){sharedUnsubscribe();sharedUnsubscribe=null;}stopFleetChat();showLogin();status('Not signed in · sign in to reconnect cloud sync');return;}
       status("Checking account approval…");
       try{
         const membership=await membershipApi.ensureMembership(current);
         state.membership=membership;
+        document.body.classList.toggle("role-staff",membership?.role==="staff"&&membership?.status==="active");
         if(!current.emailVerified){
           membershipApi.showAccess("Please verify your email address using the link sent to your inbox, then sign in again. Your fleet access remains locked until verification and administrator approval.");
           state.cloudReady=false;return;
