@@ -20,7 +20,7 @@ const authApi=createAuth({state,getData:()=>data,setData:value=>{data=value;last
 let localChangeVersion=0;
 function status(s){
   $('firebaseStatus').textContent=s;
-  $('syncBadge').textContent=state.syncPending?'Pending sync · saved on this device':state.cloudReady?'☁ Cloud Sync Active':'Local Storage · Not connected';
+  $('syncBadge').textContent=state.syncPending?'Pending sync · saved on this device':state.cloudReady?'☁ Cloud sync active · live updates':'Cloud not connected · device copy only';
   $('syncBadge').style.background=state.syncPending?'#fff0d6':state.cloudReady?'#d9f4e7':'#fff6e5';
   $('syncBadge').style.color=state.syncPending?'#815600':state.cloudReady?'#16804a':'#815600';
 }
@@ -92,11 +92,14 @@ window.addEventListener('online',()=>{
   if(state.cloudReady) syncPendingChanges();
   else authApi.reconnectCloud().then(()=>syncPendingChanges()).catch(e=>status('Cloud reconnect failed · local records are safe. Will retry. ('+e.message+')'));
 });
-window.addEventListener('focus',()=>{
+function resumeCloudSync(){
   if(!navigator.onLine||!state.user||!state.db)return;
   if(state.cloudReady) syncPendingChanges();
-  else authApi.reconnectCloud().then(()=>syncPendingChanges()).catch(e=>status('Cloud reconnect failed · local records are safe. Will retry. ('+e.message+')'));
-});
+  else authApi.reconnectCloud().then(()=>syncPendingChanges()).catch(e=>status('Cloud reconnect failed · device copy preserved. Check Firebase setup/rules. ('+e.message+')'));
+}
+window.addEventListener('focus',resumeCloudSync);
+window.addEventListener('pageshow',resumeCloudSync);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')resumeCloudSync()});
 $('weekStart').onchange=renderWeekly;
 $('thisWeekBtn').onclick=()=>{$('weekStart').value=weekBounds(today()).from;renderWeekly()};
 
