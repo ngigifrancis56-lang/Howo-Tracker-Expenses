@@ -22,7 +22,7 @@ public class TripController {
         if(from!=null&&to!=null){if(to.isBefore(from))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"End date must be on or after start date.");return trips.findByTripDateBetweenOrderByTripDateDesc(from,to);}
         return trips.findAllByOrderByTripDateDescCreatedAtDesc();
     }
-    @PostMapping @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping
     @ResponseStatus(HttpStatus.CREATED) public Trip create(@Valid @RequestBody TripRequest req){return save(new Trip(),req);}
     @PutMapping("/{id}") @PreAuthorize("hasRole('ADMIN')")
     public Trip update(@PathVariable UUID id,@Valid @RequestBody TripRequest req){Trip t=trips.findById(id).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Trip not found."));return save(t,req);}
