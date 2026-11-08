@@ -10,12 +10,13 @@ import { driverCalc, expenseTotal } from "./modules/finance.js";
 const state={db:null,auth:null,user:null,cloudReady:false,syncPending:localStorage.getItem('fleetledger-sync-pending')==='1',authUnsubscribe:null,authApp:null,chatUnsubscribe:null};
 
 let data=JSON.parse(localStorage.getItem('fleetledger-data')||'null')||blank();
+let lastSavedData=JSON.parse(JSON.stringify(data));
 
 const dashboard=createDashboard({getData:()=>data});
 const {render,renderWeekly}=dashboard;
 const chatApi=createChat({state});
 const {startFleetChat,stopFleetChat}=chatApi;
-const authApi=createAuth({state,getData:()=>data,setData:value=>{data=value},render,status,startFleetChat,stopFleetChat});
+const authApi=createAuth({state,getData:()=>data,setData:value=>{data=value;lastSavedData=JSON.parse(JSON.stringify(value))},render,status,startFleetChat,stopFleetChat});
 let localChangeVersion=0;
 function status(s){
   $('firebaseStatus').textContent=s;
@@ -42,6 +43,27 @@ async function syncPendingChanges(){
   }finally{syncInFlight=false;}
 }
 const save=()=>{
+  // Stamp changed records and keep deletion tombstones so another device cannot
+  // silently resurrect a deleted item or overwrite a newer edit.
+  const keys=['vehicles','drivers','trips','expenses','adjustments'];
+  data._syncMeta=data._syncMeta||{};
+  data._syncMeta.deleted=data._syncMeta.deleted||{};
+  const now=new Date().toISOString();
+  for(const key of keys){
+    const before=new Map((lastSavedData?.[key]||[]).map(x=>[x.id,x]));
+    const after=new Map((data?.[key]||[]).map(x=>[x.id,x]));
+    for(const [id,item] of after){
+      const prior=before.get(id);
+      if(!prior||JSON.stringify({...prior,updatedAt:undefined})!==JSON.stringify({...item,updatedAt:undefined})){
+        item.updatedAt=now;
+      }
+      delete data._syncMeta.deleted[key+':'+id];
+    }
+    for(const id of before.keys()){
+      if(!after.has(id)) data._syncMeta.deleted[key+':'+id]=now;
+    }
+  }
+  lastSavedData=JSON.parse(JSON.stringify(data));
   localChangeVersion++;
   localStorage.setItem('fleetledger-data',JSON.stringify(data));
   state.syncPending=true;
