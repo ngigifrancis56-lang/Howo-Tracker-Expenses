@@ -4,7 +4,16 @@ service cloud.firestore {
     // All authenticated Apex Logistic Group users share the company dataset.
     // Access is limited to signed-in users; never publish this collection.
     match /companies/apex-logistic-group/appData/{documentId} {
-      allow read, write: if request.auth != null;
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+    match /companies/apex-logistic-group/security/{document=**} {
+      // PIN hashes, lockouts and one-time deletion tokens are server-only.
+      allow read, write: if false;
+    }
+    match /companies/apex-logistic-group/deletionAudit/{auditId} {
+      allow read: if request.auth != null;
+      allow write: if false;
     }
     // Keep legacy per-user records readable/writable during the migration period.
     match /users/{userId}/appData/{documentId} {
