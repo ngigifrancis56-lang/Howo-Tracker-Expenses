@@ -7,7 +7,7 @@ import { initDataTools } from "./modules/data-tools.js";
 import { initReports } from "./modules/reports.js";
 import { driverCalc, expenseTotal } from "./modules/finance.js";
 
-const state={db:null,auth:null,functions:null,user:null,cloudReady:false,syncPending:localStorage.getItem('fleetledger-sync-pending')==='1',authUnsubscribe:null,authApp:null,chatUnsubscribe:null};
+const state={db:null,auth:null,user:null,cloudReady:false,syncPending:localStorage.getItem('fleetledger-sync-pending')==='1',authUnsubscribe:null,authApp:null,chatUnsubscribe:null};
 
 let data=JSON.parse(localStorage.getItem('fleetledger-data')||'null')||blank();
 let lastSavedData=JSON.parse(JSON.stringify(data));
@@ -16,9 +16,8 @@ const dashboard=createDashboard({getData:()=>data});
 const {render,renderWeekly}=dashboard;
 const chatApi=createChat({state});
 const {startFleetChat,stopFleetChat}=chatApi;
-const authApi=createAuth({state,getData:()=>data,setData:value=>{data=value;lastSavedData=JSON.parse(JSON.stringify(value))},render,status,startFleetChat,stopFleetChat});
+const authApi=createAuth({state,getData:()=>data,setData:value=>{data=value;lastSavedData=JSON.parse(JSON.stringify(value))},save,render,status,startFleetChat,stopFleetChat});
 let localChangeVersion=0;
-let pendingDeletionAuthorizationToken=localStorage.getItem('fleetledger-deletion-auth-token')||'';
 function status(s){
   $('firebaseStatus').textContent=s;
   $('syncBadge').textContent=state.syncPending?'Pending sync · saved on this device':state.cloudReady?'☁ Cloud sync active · live updates':'Cloud not connected · device copy only';
@@ -32,25 +31,7 @@ async function syncPendingChanges(){
   try{
     while(state.syncPending){
       const version=localChangeVersion;
-      try {
-        await authApi.syncCloud(pendingDeletionAuthorizationToken);
-        pendingDeletionAuthorizationToken='';
-        localStorage.removeItem('fleetledger-deletion-auth-token');
-        localStorage.removeItem('fleetledger-pending-delete-collection');
-        localStorage.removeItem('fleetledger-pending-delete-id');
-      } catch(error) {
-        if(error.code==='functions/permission-denied') {
-          const collection=localStorage.getItem('fleetledger-pending-delete-collection');
-          const recordId=localStorage.getItem('fleetledger-pending-delete-id');
-          const replacement=await authApi.requestDeletionAuthorization(collection,recordId);
-          if(replacement) {
-            pendingDeletionAuthorizationToken=replacement;
-            localStorage.setItem('fleetledger-deletion-auth-token',replacement);
-            continue;
-          }
-        }
-        throw error;
-      }
+      await authApi.syncCloud();
       if(version===localChangeVersion){
         state.syncPending=false;
         localStorage.removeItem('fleetledger-sync-pending');
@@ -61,9 +42,8 @@ async function syncPendingChanges(){
     status('Pending sync · saved on this device. Will retry when connected. ('+e.message+')');
   }finally{syncInFlight=false;}
 }
-const save=(options={})=>{
-  if(options.authorizationToken){pendingDeletionAuthorizationToken=options.authorizationToken;localStorage.setItem('fleetledger-deletion-auth-token',pendingDeletionAuthorizationToken);localStorage.setItem('fleetledger-pending-delete-collection',options.deletionCollection||'');localStorage.setItem('fleetledger-pending-delete-id',options.deletionRecordId||'');}
-  // Stamp changed records and keep deletion tombstones so another device cannot
+function save(options={}){
+  if(options.deletedRecord){\n    data._deletionAudit=Array.isArray(data._deletionAudit)?data._deletionAudit:[];\n    data._deletionAudit.push({id:uid(),deletedAt:new Date().toISOString(),deletedBy:state.user?.email||'Local user',...options.deletedRecord});\n    data._deletionAudit=data._deletionAudit.slice(-100);\n  }\n  // Stamp changed records and keep deletion tombstones so another device cannot
   // silently resurrect a deleted item or overwrite a newer edit.
   const keys=['vehicles','drivers','trips','expenses','adjustments'];
   data._syncMeta=data._syncMeta||{};
