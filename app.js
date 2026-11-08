@@ -18,6 +18,7 @@ const chatApi=createChat({state});
 const {startFleetChat,stopFleetChat}=chatApi;
 const authApi=createAuth({state,getData:()=>data,setData:value=>{data=value;lastSavedData=JSON.parse(JSON.stringify(value))},render,status,startFleetChat,stopFleetChat});
 let localChangeVersion=0;
+let pendingDeletionAuthorizationToken=localStorage.getItem('fleetledger-deletion-auth-token')||'';
 function status(s){
   $('firebaseStatus').textContent=s;
   $('syncBadge').textContent=state.syncPending?'Pending sync · saved on this device':state.cloudReady?'☁ Cloud sync active · live updates':'Cloud not connected · device copy only';
@@ -31,7 +32,21 @@ async function syncPendingChanges(){
   try{
     while(state.syncPending){
       const version=localChangeVersion;
-      await authApi.syncCloud();
+      try {
+        await authApi.syncCloud(pendingDeletionAuthorizationToken);
+        pendingDeletionAuthorizationToken='';
+        localStorage.removeItem('fleetledger-deletion-auth-token');
+      } catch(error) {
+        if(pendingDeletionAuthorizationToken && error.code==='functions/permission-denied') {
+          const replacement=await authApi.requestDeletionAuthorization();
+          if(replacement) {
+            pendingDeletionAuthorizationToken=replacement;
+            localStorage.setItem('fleetledger-deletion-auth-token',replacement);
+            continue;
+          }
+        }
+        throw error;
+      }
       if(version===localChangeVersion){
         state.syncPending=false;
         localStorage.removeItem('fleetledger-sync-pending');
@@ -42,7 +57,8 @@ async function syncPendingChanges(){
     status('Pending sync · saved on this device. Will retry when connected. ('+e.message+')');
   }finally{syncInFlight=false;}
 }
-const save=()=>{
+const save=(options={})=>{
+  if(options.authorizationToken){pendingDeletionAuthorizationToken=options.authorizationToken;localStorage.setItem('fleetledger-deletion-auth-token',pendingDeletionAuthorizationToken);}
   // Stamp changed records and keep deletion tombstones so another device cannot
   // silently resurrect a deleted item or overwrite a newer edit.
   const keys=['vehicles','drivers','trips','expenses','adjustments'];
@@ -73,7 +89,7 @@ const save=()=>{
   syncPendingChanges();
 };
 const download=(filename,content,type)=>{let a=document.createElement('a'),u=URL.createObjectURL(new Blob([content],{type}));a.href=u;a.download=filename;a.click();URL.revokeObjectURL(u)};
-initRecords({getData:()=>data,save});
+initRecords({getData:()=>data,save,requestDeletionAuthorization:authApi.requestDeletionAuthorization});
 initDataTools({getData:()=>data,setData:value=>{data=value},save,download,render});
 initReports({getData:()=>data});
 
