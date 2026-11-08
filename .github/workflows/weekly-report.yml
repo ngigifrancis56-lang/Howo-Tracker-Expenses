@@ -1,0 +1,37 @@
+name: Apex Logistic Group weekly PDF email
+on:
+  schedule:
+    - cron: "0 16 * * 6"
+  workflow_dispatch:
+    inputs:
+      test_mode:
+        description: "Send a one-off TEST report using current live records"
+        required: true
+        type: boolean
+        default: true
+permissions:
+  contents: read
+concurrency:
+  group: apex-weekly-report
+  cancel-in-progress: false
+jobs:
+  send-weekly-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out app
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install report dependencies
+        run: npm install --no-save firebase-admin googleapis pdfkit
+      - name: Generate PDF and send email
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: \${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          GMAIL_CLIENT_ID: \${{ secrets.GMAIL_CLIENT_ID }}
+          GMAIL_CLIENT_SECRET: \${{ secrets.GMAIL_CLIENT_SECRET }}
+          GMAIL_REFRESH_TOKEN: \${{ secrets.GMAIL_REFRESH_TOKEN }}
+          TEST_MODE: \${{ github.event_name == 'workflow_dispatch' && inputs.test_mode && 'true' || 'false' }}
+        run: node .github/scripts/weekly-report.cjs
