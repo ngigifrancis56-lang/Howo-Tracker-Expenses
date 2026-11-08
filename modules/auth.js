@@ -2,6 +2,7 @@ import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebase
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, setPersistence, browserLocalPersistence, indexedDBLocalPersistence, signOut as fbSignOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, runTransaction, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { $, blank } from "./utils.js";
+import { createMembership } from "./membership.js";
 
 const COMPANY_DOC = ["companies","apex-logistic-group","appData","fleetledger"];
 const RECORD_KEYS = ["vehicles","drivers","trips","expenses","adjustments"];
@@ -36,6 +37,7 @@ function mergeData(remote={}, local={}) {
 
 export function createAuth({state,getData,setData,save,render,status,startFleetChat,stopFleetChat}) {
   let sessionRun=0, sharedUnsubscribe=null, lastRemoteSignature="";
+  const membershipApi=createMembership({state,status});
   const sharedRef=()=>doc(state.db,...COMPANY_DOC);
   function showLogin(message='') {
     $('authGate').classList.remove('hidden'); $('appMain').classList.add('app-locked');
@@ -57,14 +59,16 @@ export function createAuth({state,getData,setData,save,render,status,startFleetC
     const local=getData();
     const legacySnap=await getDoc(legacyRef(state.user.uid));
     const legacy=legacySnap.exists()?legacySnap.data():{};
-    await runTransaction(state.db,async tx=>{
-      const sharedSnap=await tx.get(sharedRef());
-      const remote=sharedSnap.exists()?sharedSnap.data():{};
-      const merged=mergeData(mergeData(remote,legacy),local);
-      tx.set(sharedRef(),merged);
-    });
+    if(state.membership?.role!=="staff") {
+      await runTransaction(state.db,async tx=>{
+        const sharedSnap=await tx.get(sharedRef());
+        const remote=sharedSnap.exists()?sharedSnap.data():{};
+        const merged=mergeData(mergeData(remote,legacy),local);
+        tx.set(sharedRef(),merged);
+      });
+    }
     const latest=await getDoc(sharedRef());
-    if(latest.exists()) setData(mergeData(latest.data(),getData()));
+    if(latest.exists()) setData(state.membership?.role==="staff"?mergeData(latest.data(),{}):mergeData(latest.data(),getData()));
     localStorage.setItem('fleetledger-data',JSON.stringify(getData()));
     localStorage.setItem('fleetledger-cloud-owner',state.user.uid);
     localStorage.removeItem('fleetledger-sync-pending');
@@ -74,6 +78,7 @@ export function createAuth({state,getData,setData,save,render,status,startFleetC
   }
   async function syncCloud() {
     if(!state.user||!state.db) return;
+    if(state.membership?.role==="staff") throw new Error("Staff accounts are currently read-only while secure per-record permissions are being prepared.");
     const local=getData();
     await runTransaction(state.db,async tx=>{
       const snap=await tx.get(sharedRef());
@@ -180,9 +185,22 @@ export function createAuth({state,getData,setData,save,render,status,startFleetC
     catch(err){console.warn('Local auth persistence unavailable; trying IndexedDB.',err);await setPersistence(state.auth,indexedDBLocalPersistence);}
     if(!state.authUnsubscribe) state.authUnsubscribe=onAuthStateChanged(state.auth,async current=>{
       const run=++sessionRun; state.user=current;
-      if(!current){state.cloudReady=false;if(sharedUnsubscribe){sharedUnsubscribe();sharedUnsubscribe=null;}stopFleetChat();showLogin();status('Not signed in · sign in to reconnect cloud sync');return;}
-      status('Restoring shared company records…');
+      if(!current){state.membership=null;document.body.classList.remove("role-staff");state.cloudReady=false;if(sharedUnsubscribe){sharedUnsubscribe();sharedUnsubscribe=null;}stopFleetChat();showLogin();status('Not signed in · sign in to reconnect cloud sync');return;}
+      status("Checking account approval…");
       try{
+        const membership=await membershipApi.ensureMembership(current);
+        state.membership=membership;
+        document.body.classList.toggle("role-staff",membership?.role==="staff"&&membership?.status==="active");
+        if(!current.emailVerified){
+          membershipApi.showAccess("Please verify your email address using the link sent to your inbox, then sign in again. Your fleet access remains locked until verification and administrator approval.");
+          state.cloudReady=false;return;
+        }
+        if(!membership||membership.status!=="active"){
+          const label=membership?.status==="rejected"?"Your registration was not approved. Contact the company administrator.":membership?.status==="suspended"?"Your account is suspended. Contact the company administrator.":"Your account is awaiting administrator approval. You will be able to access fleet records once approved.";
+          membershipApi.showAccess(label);
+          state.cloudReady=false;return;
+        }
+        status("Restoring approved company access…");
         await loadCloud();
         await refreshMasterPinStatus();
         if(run!==sessionRun||state.user?.uid!==current.uid)return;
@@ -193,7 +211,9 @@ export function createAuth({state,getData,setData,save,render,status,startFleetC
         console.error('Cloud data could not be loaded:',err);
         status('Signed in · cloud sync unavailable; local records preserved');
       }
-      if(run===sessionRun&&state.user?.uid===current.uid){showApp();startFleetChat();}
+      if(run===sessionRun&&state.user?.uid===current.uid&&state.membership?.status==="active"&&current.emailVerified){
+        showApp();startFleetChat();await membershipApi.refreshAdminPanel();
+      }
     });
   }
   $('loginForm').onsubmit=async e=>{
@@ -203,18 +223,34 @@ export function createAuth({state,getData,setData,save,render,status,startFleetC
     finally{btn.disabled=false;btn.textContent='Sign in';}
   };
   $('createAccountButton').onclick=async()=>{
-    try{await prepareFirebase(loginConfig());const email=$('loginEmail').value.trim(),password=$('loginPassword').value;if(!email||password.length<6)throw new Error('Enter an email and a password of at least 6 characters.');$('loginError').textContent='Creating account…';await createUserWithEmailAndPassword(state.auth,email,password);}
+    try{
+      await prepareFirebase(loginConfig());
+      const email=$('loginEmail').value.trim(),password=$('loginPassword').value;
+      if(!email||password.length<6)throw new Error("Enter an email and a password of at least 6 characters.");
+      $("loginError").textContent="Creating account…";
+      membershipApi.setRegistrationProfile($("registerName")?.value.trim()||"", $("registerPhone")?.value.trim()||"");
+      const credential=await createUserWithEmailAndPassword(state.auth,email,password);
+      state.user=credential.user;
+      await membershipApi.register(credential.user);
+    }
     catch(err){$('loginError').textContent=err.message;}
   };
   $('connectFirebase').onclick=async()=>{
     try{const cfg={apiKey:$('fbApiKey').value.trim(),authDomain:$('fbAuthDomain').value.trim(),projectId:$('fbProjectId').value.trim(),storageBucket:$('fbBucket').value.trim(),messagingSenderId:$('fbSender').value.trim(),appId:$('fbAppId').value.trim()};if(!cfg.apiKey||!cfg.projectId||!cfg.appId)throw new Error('Enter API key, Project ID and App ID.');if(cfg.projectId!=='how-expense-tracker')throw new Error('Use the existing How Expense Tracker Firebase project.');localStorage.setItem('fleetledger-firebase-config',JSON.stringify(cfg));await prepareFirebase(cfg);alert('Firebase settings saved. Sign in to connect shared company records.');}
     catch(err){alert(err.message);}
   };
-  $('signOut').onclick=async()=>{if(state.auth)await fbSignOut(state.auth);state.user=null;state.cloudReady=false;if(sharedUnsubscribe){sharedUnsubscribe();sharedUnsubscribe=null;}stopFleetChat();showLogin('You have signed out.');};
-  async function reconnectCloud(){if(!state.user||!state.db)return;await loadCloud();state.cloudReady=true;status('Connected as '+(state.user.email||'fleet user')+' · shared cloud sync active');}
+  async function signOutCurrent(message="You have signed out.") {
+    if(state.auth)await fbSignOut(state.auth);
+    state.user=null;state.membership=null;state.cloudReady=false;document.body.classList.remove("role-staff");
+    if(sharedUnsubscribe){sharedUnsubscribe();sharedUnsubscribe=null;}
+    stopFleetChat();showLogin(message);
+  }
+  $('signOut').onclick=()=>signOutCurrent();
+  $('accessSignOut').onclick=()=>signOutCurrent("Signed out. You can now use a different account.");
+  async function reconnectCloud(){if(!state.user||!state.db)return;if(state.membership?.status!=="active")throw new Error("This account is not approved for fleet access.");await loadCloud();state.cloudReady=true;status('Connected as '+(state.user.email||'fleet user')+' · shared cloud sync active');}
   function initialize(){
     try{const c=JSON.parse(localStorage.getItem('fleetledger-firebase-config')||'null');if(c){$('fbApiKey').value=c.apiKey||'';$('fbAuthDomain').value=c.authDomain||'';$('fbProjectId').value=c.projectId||'';$('fbBucket').value=c.storageBucket||'';$('fbSender').value=c.messagingSenderId||'';$('fbAppId').value=c.appId||'';status('Checking your saved Firebase session…');prepareFirebase(c).catch(err=>{state.cloudReady=false;console.error('Firebase init failed:',err);showLogin('Could not initialise Firebase: '+err.message);status('Firebase unavailable · local records preserved');});}else showLogin('Connect Firebase and sign in to access your fleet records.');}
     catch(err){showLogin('Saved Firebase settings could not be read: '+err.message);console.error(err);}
   }
-  return {showLogin,showApp,loginConfig,prepareFirebase,syncCloud,loadCloud,reconnectCloud,requestDeletionAuthorization,refreshMasterPinStatus,initialize};
+  return {showLogin,showApp,loginConfig,prepareFirebase,syncCloud,loadCloud,reconnectCloud,requestDeletionAuthorization,refreshMasterPinStatus,refreshAdminPanel:membershipApi.refreshAdminPanel,initialize};
 }

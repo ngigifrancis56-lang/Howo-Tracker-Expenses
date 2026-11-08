@@ -230,3 +230,17 @@ table{min-width:650px}th{background:#f5f8fc;color:#52657b;font-size:11px;text-tr
 .trip-detail-grid .trip-notes{grid-column:1/-1}
 .trip-manage{justify-content:flex-end;padding:0 16px 15px;background:#fbfcfe}
 @media(max-width:600px){.trip-summary{padding:13px 12px}.trip-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:13px 12px}.trip-manage{padding:0 12px 13px}}
+
+
+/* Account approval and administrator controls */
+.member-list{display:grid;gap:10px;margin-top:12px}
+.member-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px;border:1px solid #e4ebf2;border-radius:12px;background:#fff}
+.member-row>div:first-child{display:grid;gap:4px;min-width:0}
+.member-row strong{font-size:13px;color:#17324d;overflow-wrap:anywhere}
+.member-row small{font-size:11px;color:#718397;overflow-wrap:anywhere}
+.member-controls{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.member-controls select{min-width:105px;padding:8px;border:1px solid #d6e0ea;border-radius:8px;background:#fff;color:#17324d;font-size:12px}
+.role-staff #appMain:before{content:"STAFF ACCESS · VIEW ONLY — Contact an administrator if you need permission to add or manage fleet records.";display:block;padding:12px 14px;margin:0 0 14px;border:1px solid #f0d9a8;border-radius:11px;background:#fff8e8;color:#795719;font-size:12px;font-weight:700}
+.role-staff #tripForm,.role-staff #driverForm,.role-staff #adjustForm,.role-staff #settlementForm,.role-staff #expenseForm,.role-staff #vehicleForm,.role-staff #masterPinForm,.role-staff #clearData,.role-staff #restoreFile{display:none!important}
+.role-staff [data-edit-trip],.role-staff [data-edit-driver],.role-staff [data-delete]{display:none!important}
+@media(max-width:700px){.member-row{align-items:flex-start;flex-direction:column}.member-controls{width:100%}.member-controls select{flex:1;min-width:0}}

@@ -1,18 +1,68 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // All authenticated Apex Logistic Group users share the company dataset.
-    // Access is limited to signed-in users; never publish this collection.
-    match /companies/apex-logistic-group/appData/{documentId} {
-      allow read, write: if request.auth != null;
+    function signedIn() { return request.auth != null; }
+    function memberPath(uid) { return /databases/$(database)/documents/companies/apex-logistic-group/members/$(uid); }
+    function hasActiveMembership() {
+      return signedIn()
+        && exists(memberPath(request.auth.uid))
+        && get(memberPath(request.auth.uid)).data.status == 'active'
+        && request.auth.token.email_verified == true;
     }
-    // Keep legacy per-user records readable/writable during the migration period.
+    function memberRole() {
+      return hasActiveMembership() ? get(memberPath(request.auth.uid)).data.role : 'none';
+    }
+    function isAdmin() { return hasActiveMembership() && memberRole() == 'admin'; }
+    function canManageFleet() { return hasActiveMembership() && memberRole() in ['admin','manager']; }
+    function firstAdminBootstrap() {
+      return signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.auth.token.email == 'ngigifrancis56@gmail.com'
+        && request.auth.token.email_verified == true
+        && request.resource.data.role == 'admin'
+        && request.resource.data.status == 'active';
+    }
+
+    match /companies/apex-logistic-group/members/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow list: if isAdmin();
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.keys().hasOnly(['uid','email','displayName','phone','role','status','createdAt','approvedAt','approvedBy'])
+        && (
+          (request.resource.data.role == 'staff' && request.resource.data.status == 'pending' && request.resource.data.createdAt == request.time)
+          || firstAdminBootstrap()
+        );
+      allow update: if isAdmin()
+        || (signedIn() && request.auth.uid == uid
+          && request.auth.token.email == 'ngigifrancis56@gmail.com'
+          && request.auth.token.email_verified == true
+          && resource.data.role == 'staff'
+          && resource.data.status == 'pending'
+          && request.resource.data.role == 'admin'
+          && request.resource.data.status == 'active'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role','status','approvedAt','approvedBy']))
+        || (signedIn() && request.auth.uid == uid
+          && request.resource.data.role == resource.data.role
+          && request.resource.data.status == resource.data.status
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName','phone']));
+      allow delete: if isAdmin() && uid != request.auth.uid;
+    }
+
+    // The legacy shared document is preserved. Staff can view it but cannot
+    // write the whole-company document; only Managers and Administrators can.
+    match /companies/apex-logistic-group/appData/{documentId} {
+      allow read: if hasActiveMembership();
+      allow write: if canManageFleet();
+    }
     match /users/{userId}/appData/{documentId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if hasActiveMembership() && request.auth.uid == userId;
+      allow write: if canManageFleet() && request.auth.uid == userId;
     }
     match /fleetChat/{messageId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null
+      allow read: if hasActiveMembership();
+      allow create: if hasActiveMembership()
         && request.resource.data.senderUid == request.auth.uid
         && request.resource.data.senderEmail == request.auth.token.email
         && request.resource.data.createdAt == request.time
@@ -21,7 +71,7 @@ service cloud.firestore {
           (request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 2000)
           || (request.resource.data.imageUrl is string && request.resource.data.imagePath is string && request.resource.data.imagePath.matches('fleetChat/' + request.auth.uid + '/.*'))
         );
-      allow update: if request.auth != null
+      allow update: if hasActiveMembership()
         && resource.data.senderUid == request.auth.uid
         && request.resource.data.senderUid == resource.data.senderUid
         && request.resource.data.senderEmail == resource.data.senderEmail
@@ -29,7 +79,7 @@ service cloud.firestore {
         && request.resource.data.text is string
         && request.resource.data.text.size() > 0
         && request.resource.data.text.size() <= 2000;
-      allow delete: if request.auth != null && resource.data.senderUid == request.auth.uid;
+      allow delete: if hasActiveMembership() && resource.data.senderUid == request.auth.uid;
     }
   }
 }
