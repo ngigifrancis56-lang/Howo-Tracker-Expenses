@@ -13,7 +13,10 @@ function stamp(value) {
 function mergeData(remote={}, local={}) {
   const out={...blank(),...remote,...local};
   const remoteMeta=remote?._syncMeta||{}, localMeta=local?._syncMeta||{};
-  const deleted={...(remoteMeta.deleted||{}),...(localMeta.deleted||{})};
+  const deleted={...(remoteMeta.deleted||{})};
+  for(const [key,value] of Object.entries(localMeta.deleted||{})) {
+    if(!deleted[key] || stamp(value)>stamp(deleted[key])) deleted[key]=value;
+  }
   for (const key of RECORD_KEYS) {
     const byId=new Map();
     for (const item of [...(remote?.[key]||[]),...(local?.[key]||[])]) {
