@@ -9,6 +9,11 @@ export function createMembership({state,status}) {
   const memberRef=uid=>doc(state.db,...COMPANY,"members",uid);
   async function ensureMembership(user) {
     let snap=await getDoc(memberRef(user.uid));
+    if(snap.exists() && user.email?.toLowerCase()===FIRST_ADMIN && user.emailVerified && snap.data()?.role!=="admin") {
+      await user.getIdToken(true);
+      await updateDoc(memberRef(user.uid),{role:"admin",status:"active",approvedAt:serverTimestamp(),approvedBy:"verified-first-admin-bootstrap"});
+      snap=await getDoc(memberRef(user.uid));
+    }
     if(!snap.exists()) {
       if(user.email?.toLowerCase()===FIRST_ADMIN && user.emailVerified) {
         await user.getIdToken(true);
