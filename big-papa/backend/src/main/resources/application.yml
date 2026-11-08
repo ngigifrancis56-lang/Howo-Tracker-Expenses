@@ -1,0 +1,25 @@
+server:
+  port: ${PORT:8080}
+spring:
+  application:
+    name: big-papa-api
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/bigpapa}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  jackson:
+    default-property-inclusion: non_null
+app:
+  jwt:
+    secret: ${JWT_SECRET:change-this-development-secret-to-a-long-random-value-123456}
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+  admin-email: ${BIGPAPA_ADMIN_EMAIL:}
+  cors-origin: ${CORS_ORIGIN:http://localhost:5173}
