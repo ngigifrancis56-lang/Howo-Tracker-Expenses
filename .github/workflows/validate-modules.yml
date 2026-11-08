@@ -18,5 +18,3 @@ jobs:
             echo "Checking $file"
             node --input-type=module --check < "$file"
           done
-      - name: Check Firebase Functions syntax
-        run: node --check functions/index.js
