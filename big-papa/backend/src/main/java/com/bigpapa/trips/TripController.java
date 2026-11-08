@@ -23,7 +23,7 @@ public class TripController {
         return trips.findAllByOrderByTripDateDescCreatedAtDesc();
     }
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED) public Trip create(@Valid @RequestBody TripRequest req){return save(new Trip(),req);}
+    @ResponseStatus(HttpStatus.CREATED) public Trip create(@Valid @RequestBody TripRequest req){if(req.clientRequestId()!=null){var existing=trips.findByClientRequestId(req.clientRequestId());if(existing.isPresent())return existing.get();}Trip t=new Trip();t.setClientRequestId(req.clientRequestId());return save(t,req);}
     @PutMapping("/{id}") @PreAuthorize("hasRole('ADMIN')")
     public Trip update(@PathVariable UUID id,@Valid @RequestBody TripRequest req){Trip t=trips.findById(id).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Trip not found."));return save(t,req);}
     @DeleteMapping("/{id}") @PreAuthorize("hasRole('ADMIN')")
