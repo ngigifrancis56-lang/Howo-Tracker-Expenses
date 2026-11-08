@@ -1,7 +1,6 @@
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, setPersistence, browserLocalPersistence, indexedDBLocalPersistence, signOut as fbSignOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
+import { getFirestore, doc, getDoc, setDoc, runTransaction, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { $, blank } from "./utils.js";
 
 const COMPANY_DOC = ["companies","apex-logistic-group","appData","fleetledger"];
@@ -31,7 +30,7 @@ function mergeData(remote={}, local={}) {
   return out;
 }
 
-export function createAuth({state,getData,setData,render,status,startFleetChat,stopFleetChat}) {
+export function createAuth({state,getData,setData,save,render,status,startFleetChat,stopFleetChat}) {
   let sessionRun=0, sharedUnsubscribe=null, lastRemoteSignature="";
   const sharedRef=()=>doc(state.db,...COMPANY_DOC);
   function showLogin(message='') {
@@ -54,10 +53,12 @@ export function createAuth({state,getData,setData,render,status,startFleetChat,s
     const local=getData();
     const legacySnap=await getDoc(legacyRef(state.user.uid));
     const legacy=legacySnap.exists()?legacySnap.data():{};
-    const sharedSnap=await getDoc(sharedRef());
-    const remote=sharedSnap.exists()?sharedSnap.data():{};
-    const merged=mergeData(mergeData(remote,legacy),local);
-    await httpsCallable(state.functions,'syncCompanyData')({payload:merged});
+    await runTransaction(state.db,async tx=>{
+      const sharedSnap=await tx.get(sharedRef());
+      const remote=sharedSnap.exists()?sharedSnap.data():{};
+      const merged=mergeData(mergeData(remote,legacy),local);
+      tx.set(sharedRef(),merged);
+    });
     const latest=await getDoc(sharedRef());
     if(latest.exists()) setData(mergeData(latest.data(),getData()));
     localStorage.setItem('fleetledger-data',JSON.stringify(getData()));
@@ -67,76 +68,88 @@ export function createAuth({state,getData,setData,render,status,startFleetChat,s
     attachSharedListener();
     render();
   }
-  async function syncCloud(authorizationToken='') {
-    if(!state.user||!state.db||!state.functions) return;
+  async function syncCloud() {
+    if(!state.user||!state.db) return;
     const local=getData();
-    await httpsCallable(state.functions,'syncCompanyData')({payload:local,authorizationToken});
+    await runTransaction(state.db,async tx=>{
+      const snap=await tx.get(sharedRef());
+      tx.set(sharedRef(),mergeData(snap.exists()?snap.data():{},local));
+    });
     status('Synced shared company records · '+state.user.email);
   }
-  async function refreshMasterPinStatus() {
-    const statusNode=$('masterPinStatus');
-    if(!statusNode||!state.functions||!state.user)return;
-    try {
-      const result=await httpsCallable(state.functions,'getMasterPinStatus')({});
-      const configured=!!result.data?.configured;
-      statusNode.textContent=configured?'Master PIN is configured. Deletions require it.':'No master PIN is configured yet. Set one below before deleting records.';
-      $('masterPinSetupFields').hidden=configured;
-    } catch(err) {
-      statusNode.textContent='Could not check master PIN status: '+(err.message||'Unknown error');
-    }
+
+  const PIN_ITERATIONS=180000;
+  function toBase64(bytes){return btoa(String.fromCharCode(...new Uint8Array(bytes)));}
+  function fromBase64(value){return Uint8Array.from(atob(value),c=>c.charCodeAt(0));}
+  async function derivePinHash(pin,salt){
+    if(!globalThis.crypto?.subtle) throw new Error('Secure PIN setup requires HTTPS and a modern browser.');
+    const material=await crypto.subtle.importKey('raw',new TextEncoder().encode(pin),'PBKDF2',false,['deriveBits']);
+    return toBase64(await crypto.subtle.deriveBits({name:'PBKDF2',salt:fromBase64(salt),iterations:PIN_ITERATIONS,hash:'SHA-256'},material,256));
   }
-  async function requestDeletionAuthorization(collection,recordId) {
-    if(!state.user||!state.functions) {
-      alert('Connect to the cloud before deleting records. Your record has not been changed.');
-      return null;
+  async function refreshMasterPinStatus(){
+    const security=getData()._security||{};
+    const configured=!!security.masterPin;
+    $('masterPinStatus').textContent=configured
+      ? 'A company master PIN is configured. The app will ask for it before each deletion. This free version is an app-level safeguard, not server-enforced security.'
+      : 'No master PIN is set. Create one below before using deletion protection.';
+    $('masterPinSetupFields').hidden=configured;
+  }
+  async function setMasterPin(pin){
+    if(!/^\d{6,12}$/.test(pin)) throw new Error('Choose a PIN containing 6 to 12 digits.');
+    if(getData()._security?.masterPin) throw new Error('A company master PIN is already set.');
+    const salt=toBase64(crypto.getRandomValues(new Uint8Array(16)));
+    const hash=await derivePinHash(pin,salt);
+    getData()._security={...(getData()._security||{}),masterPin:{salt,hash,iterations:PIN_ITERATIONS,algorithm:'PBKDF2-SHA256',createdAt:new Date().toISOString(),createdBy:state.user?.email||'local user'}};
+    save();
+    await refreshMasterPinStatus();
+  }
+  async function requestDeletionAuthorization(collection,recordId){
+    const security=getData()._security||{};
+    const config=security.masterPin;
+    if(!config){
+      alert('Set the company master PIN in Settings before deleting records. No record was changed.');
+      return false;
     }
-    const pin=prompt('Enter the company master PIN to authorise this deletion:');
-    if(pin===null)return null;
-    try {
-      const result=await httpsCallable(state.functions,'authorizeDeletion')({pin,collection,recordId});
-      return result.data?.authorizationToken||null;
-    } catch(err) {
-      alert((err.message||'PIN authorisation failed.')+' No record was deleted.');
-      return null;
+    const pin=prompt('Enter the company master PIN to authorise deletion of this record:');
+    if(pin===null)return false;
+    if(!/^\d{6,12}$/.test(pin)){
+      alert('Incorrect PIN format. No record was deleted.');
+      return false;
     }
+    try{
+      const actual=await derivePinHash(pin,config.salt);
+      let diff=actual.length^config.hash.length;
+      for(let i=0;i<Math.max(actual.length,config.hash.length);i++) diff|=(actual.charCodeAt(i)||0)^(config.hash.charCodeAt(i)||0);
+      if(diff!==0){alert('Incorrect master PIN. No record was deleted.');return false;}
+      return true;
+    }catch(err){alert((err.message||'PIN verification failed.')+' No record was deleted.');return false;}
   }
   $('masterPinForm').onsubmit=async e=>{
     e.preventDefault();
-    const pin=$('masterPinInput').value;
-    const confirmPin=$('masterPinConfirm').value;
+    const pin=$('masterPinInput').value,confirmPin=$('masterPinConfirm').value;
     if(pin!==confirmPin){alert('The PIN entries do not match.');return;}
-    const button=$('masterPinSave');
-    button.disabled=true;
-    try {
-      await httpsCallable(state.functions,'setMasterPin')({pin});
-      $('masterPinInput').value='';
-      $('masterPinConfirm').value='';
-      await refreshMasterPinStatus();
-      alert('Company master PIN configured. Keep it private and share it only with trusted staff.');
-    } catch(err) {
-      alert(err.message||'Could not configure the master PIN.');
-    } finally {button.disabled=false;}
+    const button=$('masterPinSave');button.disabled=true;
+    try{
+      await setMasterPin(pin);
+      $('masterPinInput').value='';$('masterPinConfirm').value='';
+      alert('Company master PIN saved. Share it only with staff you trust.');
+    }catch(err){alert(err.message||'Could not save the master PIN.');}
+    finally{button.disabled=false;}
   };
-  $('loadDeletionAudit').onclick=async()=>{
-    const button=$('loadDeletionAudit'),container=$('deletionAuditList');
-    button.disabled=true;container.textContent='Loading deletion history…';
-    try {
-      const result=await httpsCallable(state.functions,'getDeletionAudit')({});
-      container.replaceChildren();
-      const entries=result.data?.entries||[];
-      if(!entries.length){container.textContent='No deletion history has been recorded.';return;}
-      for(const entry of entries){
-        const item=document.createElement('div');item.className='notice';
-        const heading=document.createElement('strong');
-        heading.textContent=(entry.deletedByEmail||'Unknown account')+' · '+(entry.deletedAt?new Date(entry.deletedAt).toLocaleString():'Time unavailable');
-        const detail=document.createElement('p');
-        detail.textContent=(entry.records||[]).map(record=>record.collection+' · '+(record.label||record.id)+(record.date?' · '+record.date:'')).join(' | ');
-        item.append(heading,detail);container.append(item);
-      }
-    } catch(err) {
-      container.textContent='Could not load deletion history: '+(err.message||'Unknown error');
-    } finally {button.disabled=false;}
+  $('loadDeletionAudit').onclick=()=>{
+    const container=$('deletionAuditList');container.replaceChildren();
+    const entries=[...(getData()._deletionAudit||[])].slice(-50).reverse();
+    if(!entries.length){container.textContent='No deletion history has been recorded.';return;}
+    for(const entry of entries){
+      const item=document.createElement('div');item.className='notice';
+      const heading=document.createElement('strong');
+      heading.textContent=(entry.deletedBy||'Unknown account')+' · '+new Date(entry.deletedAt).toLocaleString();
+      const detail=document.createElement('p');
+      detail.textContent=entry.collection+' · '+entry.label+(entry.recordDate?' · '+entry.recordDate:'');
+      item.append(heading,detail);container.append(item);
+    }
   };
+
   function attachSharedListener() {
     if(sharedUnsubscribe) sharedUnsubscribe();
     sharedUnsubscribe=onSnapshot(sharedRef(),snap=>{
@@ -158,7 +171,7 @@ export function createAuth({state,getData,setData,render,status,startFleetChat,s
   }
   async function prepareFirebase(cfg) {
     state.authApp=getApps().length?getApp():initializeApp(cfg);
-    state.auth=getAuth(state.authApp); state.db=getFirestore(state.authApp); state.functions=getFunctions(state.authApp);
+    state.auth=getAuth(state.authApp); state.db=getFirestore(state.authApp);
     try { await setPersistence(state.auth,browserLocalPersistence); }
     catch(err){console.warn('Local auth persistence unavailable; trying IndexedDB.',err);await setPersistence(state.auth,indexedDBLocalPersistence);}
     if(!state.authUnsubscribe) state.authUnsubscribe=onAuthStateChanged(state.auth,async current=>{
