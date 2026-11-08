@@ -11,6 +11,7 @@ import java.util.UUID;
 @Table(name="trips")
 public class Trip {
     @Id @GeneratedValue(strategy=GenerationType.UUID) private UUID id;
+    @Column(unique=true) private UUID clientRequestId;
     @NotNull @Column(nullable=false) private LocalDate tripDate;
     @NotNull @Column(nullable=false) private UUID vehicleId;
     @NotBlank @Column(nullable=false,length=20) private String vehicleRegistration;
@@ -34,6 +35,7 @@ public class Trip {
     public BigDecimal getProfit(){return income.subtract(getTotalExpenses()).subtract(driverPay);}
     public BigDecimal getDriverBalance(){return driverPay.subtract(driverAdvance).subtract(driverDeduction);}
     public UUID getId(){return id;}
+    public UUID getClientRequestId(){return clientRequestId;} public void setClientRequestId(UUID v){clientRequestId=v;}
     public LocalDate getTripDate(){return tripDate;} public void setTripDate(LocalDate v){tripDate=v;}
     public UUID getVehicleId(){return vehicleId;} public void setVehicleId(UUID v){vehicleId=v;}
     public String getVehicleRegistration(){return vehicleRegistration;} public void setVehicleRegistration(String v){vehicleRegistration=v;}
