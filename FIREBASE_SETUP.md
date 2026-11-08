@@ -1,64 +1,48 @@
-# Firebase setup (one-time)
+# Firebase setup and shared company sync
 
-This app is already wired to Firebase Web SDK 10.12.2. You must create and configure your own Firebase project; this ZIP does not contain your private project configuration.
+Apex Logistic Group uses the existing Firebase project `how-expense-tracker`. Keep using the same project and web-app configuration already saved in each browser. Do not create a new Firebase project for this update.
 
-## 1. Create project and web app
-1. Open https://console.firebase.google.com/ and create a project.
-2. In Project settings > General > Your apps, add a Web app.
-3. Copy the web configuration values (apiKey, authDomain, projectId, storageBucket, messagingSenderId, appId).
-4. In FleetLedger open **Firebase & Settings**, paste those values and choose **Connect / sign in**.
+## 1. Publish the updated Firestore rules (required)
 
-Firebase web API keys identify a project; they are not admin credentials. Never put service-account private keys in this app.
+The application code is deployed through GitHub Pages, but GitHub Pages does **not** publish Firebase security rules automatically.
 
-## 2. Enable email/password login
-Firebase Console > Build > Authentication > Get started > Sign-in method > Email/Password > Enable > Save.
+1. Open [Firebase Console](https://console.firebase.google.com/project/how-expense-tracker/firestore).
+2. Select **Firestore Database → Rules**.
+3. Open the repository file [firestore.rules](./firestore.rules).
+4. Replace the rules in the Firebase editor with the complete contents of that file.
+5. Click **Publish** and wait for Firebase to confirm publication.
 
-The app will ask for an email and password. It tries to sign in first; if the account does not exist, it offers to create it using the supplied credentials. For first setup, use a strong password and remember it.
+The updated rules let signed-in Apex Logistic Group accounts read and write the shared company dataset at `companies/apex-logistic-group/appData/fleetledger`. They retain the old per-user path so legacy records can be migrated. Chat rules remain included.
 
-## 3. Create Firestore
-Firebase Console > Build > Firestore Database > Create database. Choose a region close to your users, then create it.
+**Access note:** the app currently treats every authenticated account as a company user, consistent with the requested all-admin setup. Anyone who can create/sign into an account can therefore access the shared fleet records. Do not distribute account creation access beyond trusted staff. These are authenticated rules, not public unauthenticated access.
 
-## 4. Firestore security rules
-In Firestore > Rules, publish:
+## 2. What changed in cloud synchronisation
 
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-  }
-}
-```
+- All signed-in accounts use one shared company database.
+- Live Firestore updates are listened for while the app is open.
+- Writes use Firestore transactions and merge records by ID instead of blindly replacing the complete dataset.
+- Edited records receive update timestamps; deletions are tracked so stale devices do not normally restore removed records.
+- Each account's old `users/{uid}/appData/fleetledger` document is retained and merged into the shared dataset the first time that account signs in after the update.
+- The old per-user documents are deliberately not deleted.
 
-This lets each signed-in user access only their own data path. Do not use open rules such as `allow read, write: if true`.
+Each existing user should sign in once after the new app is live and after the updated Firestore rules are published. This allows that user's legacy cloud records to be merged into the shared company database. Use the same Firebase project and existing login credentials.
 
-## 5. Test cloud sync
-1. Connect from the app using your Firebase web config.
-2. Create a test vehicle, driver and trip.
-3. Sign in on another device/browser using the same account.
-4. If cloud data is found, choose the cloud records when prompted.
+## 3. Protect and recover existing data
 
-## Data model and calculation
-- Each trip stores its own individually entered driver-pay amount; no fixed driver rate is assumed.
-- Driver balance = trip pay earned - advances - deductions - salary settlements.
-- Business net profit = trip income - fuel/other trip costs - recorded business expenses - driver pay earned.
-- An advance is a cash payment against earned driver pay; it is not counted a second time in business expenses. A deduction reduces the driver's balance. Record actual business costs separately under Expenses if they should reduce business profit.
+Before the first post-update login on each device, do not clear browser data, uninstall the PWA, or use the app's Clear Data button. If a device still displays records that are missing elsewhere, open **Settings → Backup & restore → Download JSON backup** on that device and keep the file safe. Do not restore a backup over the shared database until its contents have been checked.
 
-## Important current limitations
-- This is a functional starter PWA, not a native signed iOS IPA.
-- The current sync is a single user-owned Firestore document and synchronizes on save / sign-in, not multi-user live collaboration or conflict merging. Avoid editing the same account concurrently on multiple devices until a stronger sync strategy is implemented.
-- Local data is not automatically merged into cloud data. Make a JSON backup before connecting and choose carefully when prompted.
-- Keep Firebase Authentication and Firestore rules enabled. Do not share your login password.
+The new merge can preserve records still present in a device's local storage or legacy per-user Firestore document. It cannot recreate records that have already been erased from every device and every cloud copy; Firebase backups or exports may be needed for those.
 
-## 6. Enable pictures in Fleet Live Chat
+## 4. Firebase authentication
 
-The live chat picture feature stores image files in Firebase Storage and their download references in the `fleetChat` Firestore collection.
+Keep Email/Password enabled in **Authentication → Sign-in method**. Keep the existing authorised domain `ngigifrancis56-lang.github.io`. Do not change the Firebase project, API key, app ID, or authentication provider as part of this sync repair.
 
-1. In Firebase Console, open **Build → Storage** and create/enable the project's Storage bucket if it is not already set up.
-2. Open **Storage → Rules**, replace the rules with the contents of this repository's `storage.rules` file, then click **Publish**.
-3. Open **Firestore Database → Rules**, and replace the rules with the contents of this repository's `firestore.rules` file, then click **Publish**. These rules preserve per-user fleet records and allow signed-in users to read the shared chat while only allowing each sender to edit or delete their own messages.
-4. Reload Apex Logistic Group and open **Live Chat**. Choose **Attach picture**, select an image, then press **Send**. Images are limited to 5 MB each.
+## 5. Live Chat image uploads
 
-**Billing note:** Firebase Storage availability and required billing depend on the project's bucket and Firebase plan. Check the Storage page in Firebase Console before enabling it; do not upgrade a billing plan without reviewing the costs. The app's text chat continues to work independently if Storage is not enabled.
+The chat image feature uses Firebase Storage. If images are already working, leave Storage configuration unchanged. If not, open **Storage → Rules**, publish the rules from this repository's `storage.rules` file, and check the project's Storage billing requirements before enabling a paid bucket.
+
+## Important
+
+- Do not publish permissive rules such as `allow read, write: if true`.
+- Do not delete the old per-user Firestore documents until all users have signed in and their records have been verified in the shared dataset.
+- The app's daily reminder is browser-based; it may require the app/browser to be open and notification permission to be granted.
