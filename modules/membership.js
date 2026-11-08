@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, setDoc, updateDoc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { collection, doc, getDoc, getDocs, setDoc, updateDoc, serverTimestamp, query, orderBy, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { sendEmailVerification } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { $ } from "./utils.js";
 
@@ -74,6 +74,8 @@ export function createMembership({state,status}) {
   async function register(email,password,displayName,phone) {
     // The Firebase account is created by auth.js. This method only sends verification.
     if(!state.user)throw new Error("Account creation did not complete.");
+    const displayNameValue=String(displayName||"").trim().slice(0,100), phoneValue=String(phone||"").trim().slice(0,30);
+    if(displayNameValue||phoneValue) await updateDoc(memberRef(state.user.uid),{...(displayNameValue?{displayName:displayNameValue}:{}),...(phoneValue?{phone:phoneValue}:{})});
     if(!state.user.emailVerified)await sendEmailVerification(state.user);
     status("Verification email sent. Verify your email, then wait for administrator approval.");
   }
