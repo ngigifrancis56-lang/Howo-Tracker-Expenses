@@ -26,7 +26,7 @@ function mergeData(remote={}, local={}) {
     }
     out[key]=[...byId.values()].filter(item=>stamp(deleted[key+":"+item.id])<stamp(item.updatedAt));
   }
-  out._syncMeta={deleted};
+  out._syncMeta={deleted};\n  const auditById=new Map();\n  for(const entry of [...(remote?._deletionAudit||[]),...(local?._deletionAudit||[])]) if(entry?.id) auditById.set(entry.id,entry);\n  out._deletionAudit=[...auditById.values()].sort((x,y)=>Date.parse(x.deletedAt||0)-Date.parse(y.deletedAt||0)).slice(-100);\n  out._security={...(local?._security||{}),...(remote?._security||{})};
   return out;
 }
 
