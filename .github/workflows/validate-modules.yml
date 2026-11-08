@@ -14,6 +14,7 @@ jobs:
           node-version: 20
       - name: Check JavaScript module syntax
         run: |
+          node --check .github/scripts/weekly-report.cjs
           for file in app.js modules/*.js; do
             echo "Checking $file"
             node --input-type=module --check < "$file"
