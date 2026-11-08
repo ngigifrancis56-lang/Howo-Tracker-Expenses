@@ -186,3 +186,22 @@ exports.syncCompanyData = onCall(async (request) => {
     return { ok: true, deletedCount: removed.length };
   });
 });
+
+exports.getDeletionAudit = onCall(async (request) => {
+  requireUser(request);
+  const snapshot = await db.collection([...COMPANY, "deletionAudit"].join("/"))
+    .orderBy("deletedAt", "desc")
+    .limit(50)
+    .get();
+  return {
+    entries: snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        deletedByEmail: data.deletedByEmail || "Unknown account",
+        deletedAt: data.deletedAt?.toDate?.().toISOString() || null,
+        records: data.records || []
+      };
+    })
+  };
+});
