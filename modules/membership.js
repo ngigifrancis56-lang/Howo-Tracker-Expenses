@@ -7,6 +7,7 @@ const FIRST_ADMIN="ngigifrancis56@gmail.com";
 
 export function createMembership({state,status}) {
   const memberRef=uid=>doc(state.db,...COMPANY,"members",uid);
+  let registrationProfile={displayName:"",phone:""};
   async function ensureMembership(user) {
     let snap=await getDoc(memberRef(user.uid));
     if(snap.exists() && user.email?.toLowerCase()===FIRST_ADMIN && user.emailVerified && snap.data()?.role!=="admin") {
@@ -18,13 +19,13 @@ export function createMembership({state,status}) {
       if(user.email?.toLowerCase()===FIRST_ADMIN && user.emailVerified) {
         await user.getIdToken(true);
         await setDoc(memberRef(user.uid),{
-          uid:user.uid,email:user.email,displayName:user.displayName||"",
+          uid:user.uid,email:user.email,displayName:registrationProfile.displayName||user.displayName||"",phone:registrationProfile.phone||"",
           role:"admin",status:"active",createdAt:serverTimestamp(),
           approvedAt:serverTimestamp(),approvedBy:"verified-first-admin-bootstrap"
         });
       } else {
         await setDoc(memberRef(user.uid),{
-          uid:user.uid,email:user.email||"",displayName:user.displayName||"",
+          uid:user.uid,email:user.email||"",displayName:registrationProfile.displayName||user.displayName||"",phone:registrationProfile.phone||"",
           role:"staff",status:"pending",createdAt:serverTimestamp()
         });
       }
@@ -76,13 +77,14 @@ export function createMembership({state,status}) {
       }
     } catch(err){list.textContent="Could not load accounts: "+err.message;}
   }
-  async function register(email,password,displayName,phone) {
-    // The Firebase account is created by auth.js. This method only sends verification.
+  function setRegistrationProfile(displayName,phone) {
+    registrationProfile={displayName:String(displayName||"").trim().slice(0,100),phone:String(phone||"").trim().slice(0,30)};
+  }
+  async function register() {
     if(!state.user)throw new Error("Account creation did not complete.");
-    const displayNameValue=String(displayName||"").trim().slice(0,100), phoneValue=String(phone||"").trim().slice(0,30);
-    if(displayNameValue||phoneValue) await updateDoc(memberRef(state.user.uid),{...(displayNameValue?{displayName:displayNameValue}:{}),...(phoneValue?{phone:phoneValue}:{})});
     if(!state.user.emailVerified)await sendEmailVerification(state.user);
+    registrationProfile={displayName:"",phone:""};
     status("Verification email sent. Verify your email, then wait for administrator approval.");
   }
-  return {ensureMembership,showAccess,refreshAdminPanel,register};
+  return {ensureMembership,showAccess,refreshAdminPanel,register,setRegistrationProfile};
 }
