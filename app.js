@@ -7,7 +7,7 @@ import { initDataTools } from "./modules/data-tools.js";
 import { initReports } from "./modules/reports.js";
 import { driverCalc, expenseTotal } from "./modules/finance.js";
 
-const state={db:null,auth:null,user:null,cloudReady:false,syncPending:localStorage.getItem('fleetledger-sync-pending')==='1',authUnsubscribe:null,authApp:null,chatUnsubscribe:null};
+const state={db:null,auth:null,functions:null,user:null,cloudReady:false,syncPending:localStorage.getItem('fleetledger-sync-pending')==='1',authUnsubscribe:null,authApp:null,chatUnsubscribe:null};
 
 let data=JSON.parse(localStorage.getItem('fleetledger-data')||'null')||blank();
 let lastSavedData=JSON.parse(JSON.stringify(data));
