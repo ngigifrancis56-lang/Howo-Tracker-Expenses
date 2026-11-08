@@ -26,7 +26,7 @@ function status(s){
 }
 let syncInFlight=false;
 async function syncPendingChanges(){
-  if(syncInFlight||!state.user||!state.db||!state.cloudReady||!state.syncPending)return;
+  if(syncInFlight||!state.user||!state.db||!state.cloudReady||!state.syncPending||state.membership?.role==="staff")return;
   syncInFlight=true;
   try{
     while(state.syncPending){
