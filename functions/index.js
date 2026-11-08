@@ -10,8 +10,6 @@ const COMPANY = ["companies", "apex-logistic-group"];
 const APP_DATA = [...COMPANY, "appData", "fleetledger"];
 const SECURITY = [...COMPANY, "security"];
 const RECORD_KEYS = ["vehicles", "drivers", "trips", "expenses", "adjustments"];
-const PIN_MIN = 6;
-const PIN_MAX = 12;
 const AUTH_WINDOW_MS = 2 * 60 * 1000;
 const LOCK_MS = 15 * 60 * 1000;
 const MAX_ATTEMPTS = 5;
@@ -22,12 +20,13 @@ const requireUser = (request) => {
   if (!request.auth?.uid) throw new HttpsError("unauthenticated", "Sign in before continuing.");
   return request.auth;
 };
-const validPin = (pin) => typeof pin === "string" && /^\\d{6,12}$/.test(pin);
+const validPin = (pin) => typeof pin === "string" && /^\d{6,12}$/.test(pin);
 const stamp = (value) => {
   if (value instanceof Timestamp) return value.toMillis();
   const n = Date.parse(value || "");
   return Number.isFinite(n) ? n : 0;
 };
+
 function mergeData(remote = {}, incoming = {}) {
   const out = { ...remote, ...incoming };
   const deleted = { ...(remote?._syncMeta?.deleted || {}) };
@@ -46,6 +45,7 @@ function mergeData(remote = {}, incoming = {}) {
   out._syncMeta = { ...(remote?._syncMeta || {}), ...(incoming?._syncMeta || {}), deleted };
   return out;
 }
+
 function removedRecords(before, after) {
   const removed = [];
   for (const key of RECORD_KEYS) {
@@ -64,7 +64,13 @@ function removedRecords(before, after) {
   return removed;
 }
 
-exports.getMasterPinStatus = onCall(async (request) => {\n  requireUser(request);\n  const snap = await ref([...SECURITY, "masterPin"]).get();\n  return { configured: snap.exists };\n});\n\nexports.setMasterPin = onCall(async (request) => {
+exports.getMasterPinStatus = onCall(async (request) => {
+  requireUser(request);
+  const snap = await ref([...SECURITY, "masterPin"]).get();
+  return { configured: snap.exists };
+});
+
+exports.setMasterPin = onCall(async (request) => {
   const user = requireUser(request);
   const pin = request.data?.pin;
   if (!validPin(pin)) {
@@ -101,7 +107,7 @@ exports.authorizeDeletion = onCall(async (request) => {
   const tokenRef = ref([...SECURITY, "deletionAuthorizations", token]);
   const now = Date.now();
 
-  await db.runTransaction(async tx => {
+  const authorized = await db.runTransaction(async tx => {
     const [pinSnap, attemptSnap] = await Promise.all([tx.get(pinRef), tx.get(attemptRef)]);
     if (!pinSnap.exists) throw new HttpsError("failed-precondition", "The company master PIN has not been configured yet.");
     const attempt = attemptSnap.exists ? attemptSnap.data() : {};
@@ -120,7 +126,7 @@ exports.authorizeDeletion = onCall(async (request) => {
         lockedUntil: attempts >= MAX_ATTEMPTS ? Timestamp.fromMillis(now + LOCK_MS) : null,
         updatedAt: FieldValue.serverTimestamp()
       });
-      return;
+      return false;
     }
     tx.set(attemptRef, { attempts: 0, lockedUntil: null, updatedAt: FieldValue.serverTimestamp() });
     tx.create(tokenRef, {
@@ -128,10 +134,10 @@ exports.authorizeDeletion = onCall(async (request) => {
       createdAt: FieldValue.serverTimestamp(),
       expiresAt: Timestamp.fromMillis(now + AUTH_WINDOW_MS)
     });
+    return true;
   });
 
-  const attempt = await attemptRef.get();
-  if ((attempt.data()?.attempts || 0) > 0) {
+  if (!authorized) {
     throw new HttpsError("permission-denied", "Incorrect master PIN. No record was deleted.");
   }
   return { authorizationToken: token, expiresInSeconds: AUTH_WINDOW_MS / 1000 };
@@ -157,11 +163,10 @@ exports.syncCompanyData = onCall(async (request) => {
     const before = companySnap.exists ? companySnap.data() : {};
     const merged = mergeData(before, payload);
     const removed = removedRecords(before, merged);
-    let tokenSnap = null;
 
     if (removed.length) {
       if (!tokenRef) throw new HttpsError("permission-denied", "A master PIN authorisation is required. No records were deleted.");
-      tokenSnap = await tx.get(tokenRef);
+      const tokenSnap = await tx.get(tokenRef);
       const authData = tokenSnap.exists ? tokenSnap.data() : null;
       if (!authData || authData.uid !== user.uid || !authData.expiresAt || authData.expiresAt.toMillis() <= Date.now()) {
         throw new HttpsError("permission-denied", "Deletion authorisation is missing or expired. No records were deleted.");
