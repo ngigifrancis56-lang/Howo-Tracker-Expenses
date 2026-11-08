@@ -16,7 +16,7 @@ const dashboard=createDashboard({getData:()=>data});
 const {render,renderWeekly}=dashboard;
 const chatApi=createChat({state});
 const {startFleetChat,stopFleetChat}=chatApi;
-const authApi=createAuth({state,getData:()=>data,setData:value=>{data=value;lastSavedData=JSON.parse(JSON.stringify(value))},render,status,startFleetChat,stopFleetChat});
+const authApi=createAuth({state,getData:()=>data,setData:value=>{data=value;lastSavedData=JSON.parse(JSON.stringify(value))},save,render,status,startFleetChat,stopFleetChat});
 let localChangeVersion=0;
 function status(s){
   $('firebaseStatus').textContent=s;
@@ -42,7 +42,12 @@ async function syncPendingChanges(){
     status('Pending sync · saved on this device. Will retry when connected. ('+e.message+')');
   }finally{syncInFlight=false;}
 }
-const save=()=>{
+function save(options={}){
+  if(options.deletedRecord){
+    data._deletionAudit=Array.isArray(data._deletionAudit)?data._deletionAudit:[];
+    data._deletionAudit.push({id:uid(),deletedAt:new Date().toISOString(),deletedBy:state.user?.email||'Local user',...options.deletedRecord});
+    data._deletionAudit=data._deletionAudit.slice(-100);
+  }
   // Stamp changed records and keep deletion tombstones so another device cannot
   // silently resurrect a deleted item or overwrite a newer edit.
   const keys=['vehicles','drivers','trips','expenses','adjustments'];
@@ -73,7 +78,7 @@ const save=()=>{
   syncPendingChanges();
 };
 const download=(filename,content,type)=>{let a=document.createElement('a'),u=URL.createObjectURL(new Blob([content],{type}));a.href=u;a.download=filename;a.click();URL.revokeObjectURL(u)};
-initRecords({getData:()=>data,save});
+initRecords({getData:()=>data,save,requestDeletionAuthorization:authApi.requestDeletionAuthorization});
 initDataTools({getData:()=>data,setData:value=>{data=value},save,download,render});
 initReports({getData:()=>data});
 

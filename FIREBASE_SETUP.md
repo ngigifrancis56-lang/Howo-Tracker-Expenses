@@ -46,3 +46,11 @@ The chat image feature uses Firebase Storage. If images are already working, lea
 - Do not publish permissive rules such as `allow read, write: if true`.
 - Do not delete the old per-user Firestore documents until all users have signed in and their records have been verified in the shared dataset.
 - The app's daily reminder is browser-based; it may require the app/browser to be open and notification permission to be granted.
+
+## 6. Free master-PIN deletion safeguard
+
+The app includes an optional company master PIN for the delete buttons. It stores a salted PBKDF2-SHA256 hash in the existing shared company data document, not the plain PIN. A correct PIN is required in the app before deleting a vehicle, driver, trip, expense, or driver adjustment. The app also records a recent deletion history with the signed-in account and timestamp.
+
+**Security limitation:** this is an app-level safeguard only. The existing Firestore rules still allow authenticated users to write the shared company data document. A knowledgeable user with direct database or browser developer-tools access could bypass or alter this check. The PIN is useful for preventing accidental or casual deletion, but it is not tamper-proof security. True server-enforced deletion authorisation requires a trusted backend, which is not included because Cloud Functions would require a paid Firebase plan.
+
+No Firebase billing upgrade or Firestore rules change is needed for this free version. Keep the existing production Firestore rules unchanged. After the app update is published and refreshed on each device, set the company PIN once in Settings. The PIN hash and deletion history sync with the shared company record. Keep the PIN private and continue taking regular JSON backups.

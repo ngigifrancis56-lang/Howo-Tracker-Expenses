@@ -27,10 +27,14 @@ function mergeData(remote={}, local={}) {
     out[key]=[...byId.values()].filter(item=>stamp(deleted[key+":"+item.id])<stamp(item.updatedAt));
   }
   out._syncMeta={deleted};
+  const auditById=new Map();
+  for(const entry of [...(remote?._deletionAudit||[]),...(local?._deletionAudit||[])]) if(entry?.id) auditById.set(entry.id,entry);
+  out._deletionAudit=[...auditById.values()].sort((x,y)=>Date.parse(x.deletedAt||0)-Date.parse(y.deletedAt||0)).slice(-100);
+  out._security={...(local?._security||{}),...(remote?._security||{})};
   return out;
 }
 
-export function createAuth({state,getData,setData,render,status,startFleetChat,stopFleetChat}) {
+export function createAuth({state,getData,setData,save,render,status,startFleetChat,stopFleetChat}) {
   let sessionRun=0, sharedUnsubscribe=null, lastRemoteSignature="";
   const sharedRef=()=>doc(state.db,...COMPANY_DOC);
   function showLogin(message='') {
@@ -77,6 +81,79 @@ export function createAuth({state,getData,setData,render,status,startFleetChat,s
     });
     status('Synced shared company records · '+state.user.email);
   }
+
+  const PIN_ITERATIONS=180000;
+  function toBase64(bytes){return btoa(String.fromCharCode(...new Uint8Array(bytes)));}
+  function fromBase64(value){return Uint8Array.from(atob(value),c=>c.charCodeAt(0));}
+  async function derivePinHash(pin,salt){
+    if(!globalThis.crypto?.subtle) throw new Error('Secure PIN setup requires HTTPS and a modern browser.');
+    const material=await crypto.subtle.importKey('raw',new TextEncoder().encode(pin),'PBKDF2',false,['deriveBits']);
+    return toBase64(await crypto.subtle.deriveBits({name:'PBKDF2',salt:fromBase64(salt),iterations:PIN_ITERATIONS,hash:'SHA-256'},material,256));
+  }
+  async function refreshMasterPinStatus(){
+    const security=getData()._security||{};
+    const configured=!!security.masterPin;
+    $('masterPinStatus').textContent=configured
+      ? 'A company master PIN is configured. The app will ask for it before each deletion. This free version is an app-level safeguard, not server-enforced security.'
+      : 'No master PIN is set. Create one below before using deletion protection.';
+    $('masterPinSetupFields').hidden=configured;
+  }
+  async function setMasterPin(pin){
+    if(!/^\d{6,12}$/.test(pin)) throw new Error('Choose a PIN containing 6 to 12 digits.');
+    if(getData()._security?.masterPin) throw new Error('A company master PIN is already set.');
+    const salt=toBase64(crypto.getRandomValues(new Uint8Array(16)));
+    const hash=await derivePinHash(pin,salt);
+    getData()._security={...(getData()._security||{}),masterPin:{salt,hash,iterations:PIN_ITERATIONS,algorithm:'PBKDF2-SHA256',createdAt:new Date().toISOString(),createdBy:state.user?.email||'local user'}};
+    save();
+    await refreshMasterPinStatus();
+  }
+  async function requestDeletionAuthorization(collection,recordId){
+    const security=getData()._security||{};
+    const config=security.masterPin;
+    if(!config){
+      alert('Set the company master PIN in Settings before deleting records. No record was changed.');
+      return false;
+    }
+    const pin=prompt('Enter the company master PIN to authorise deletion of this record:');
+    if(pin===null)return false;
+    if(!/^\d{6,12}$/.test(pin)){
+      alert('Incorrect PIN format. No record was deleted.');
+      return false;
+    }
+    try{
+      const actual=await derivePinHash(pin,config.salt);
+      let diff=actual.length^config.hash.length;
+      for(let i=0;i<Math.max(actual.length,config.hash.length);i++) diff|=(actual.charCodeAt(i)||0)^(config.hash.charCodeAt(i)||0);
+      if(diff!==0){alert('Incorrect master PIN. No record was deleted.');return false;}
+      return true;
+    }catch(err){alert((err.message||'PIN verification failed.')+' No record was deleted.');return false;}
+  }
+  $('masterPinForm').onsubmit=async e=>{
+    e.preventDefault();
+    const pin=$('masterPinInput').value,confirmPin=$('masterPinConfirm').value;
+    if(pin!==confirmPin){alert('The PIN entries do not match.');return;}
+    const button=$('masterPinSave');button.disabled=true;
+    try{
+      await setMasterPin(pin);
+      $('masterPinInput').value='';$('masterPinConfirm').value='';
+      alert('Company master PIN saved. Share it only with staff you trust.');
+    }catch(err){alert(err.message||'Could not save the master PIN.');}
+    finally{button.disabled=false;}
+  };
+  $('loadDeletionAudit').onclick=()=>{
+    const container=$('deletionAuditList');container.replaceChildren();
+    const entries=[...(getData()._deletionAudit||[])].slice(-50).reverse();
+    if(!entries.length){container.textContent='No deletion history has been recorded.';return;}
+    for(const entry of entries){
+      const item=document.createElement('div');item.className='notice';
+      const heading=document.createElement('strong');
+      heading.textContent=(entry.deletedBy||'Unknown account')+' · '+new Date(entry.deletedAt).toLocaleString();
+      const detail=document.createElement('p');
+      detail.textContent=entry.collection+' · '+entry.label+(entry.recordDate?' · '+entry.recordDate:'');
+      item.append(heading,detail);container.append(item);
+    }
+  };
+
   function attachSharedListener() {
     if(sharedUnsubscribe) sharedUnsubscribe();
     sharedUnsubscribe=onSnapshot(sharedRef(),snap=>{
@@ -107,6 +184,7 @@ export function createAuth({state,getData,setData,render,status,startFleetChat,s
       status('Restoring shared company records…');
       try{
         await loadCloud();
+        await refreshMasterPinStatus();
         if(run!==sessionRun||state.user?.uid!==current.uid)return;
         state.cloudReady=true;status('Connected as '+current.email+' · shared cloud sync active');
       }catch(err){
@@ -138,5 +216,5 @@ export function createAuth({state,getData,setData,render,status,startFleetChat,s
     try{const c=JSON.parse(localStorage.getItem('fleetledger-firebase-config')||'null');if(c){$('fbApiKey').value=c.apiKey||'';$('fbAuthDomain').value=c.authDomain||'';$('fbProjectId').value=c.projectId||'';$('fbBucket').value=c.storageBucket||'';$('fbSender').value=c.messagingSenderId||'';$('fbAppId').value=c.appId||'';status('Checking your saved Firebase session…');prepareFirebase(c).catch(err=>{state.cloudReady=false;console.error('Firebase init failed:',err);showLogin('Could not initialise Firebase: '+err.message);status('Firebase unavailable · local records preserved');});}else showLogin('Connect Firebase and sign in to access your fleet records.');}
     catch(err){showLogin('Saved Firebase settings could not be read: '+err.message);console.error(err);}
   }
-  return {showLogin,showApp,loginConfig,prepareFirebase,syncCloud,loadCloud,reconnectCloud,initialize};
+  return {showLogin,showApp,loginConfig,prepareFirebase,syncCloud,loadCloud,reconnectCloud,requestDeletionAuthorization,refreshMasterPinStatus,initialize};
 }
