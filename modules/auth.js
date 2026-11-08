@@ -117,6 +117,26 @@ export function createAuth({state,getData,setData,render,status,startFleetChat,s
       alert(err.message||'Could not configure the master PIN.');
     } finally {button.disabled=false;}
   };
+  $('loadDeletionAudit').onclick=async()=>{
+    const button=$('loadDeletionAudit'),container=$('deletionAuditList');
+    button.disabled=true;container.textContent='Loading deletion history…';
+    try {
+      const result=await httpsCallable(state.functions,'getDeletionAudit')({});
+      container.replaceChildren();
+      const entries=result.data?.entries||[];
+      if(!entries.length){container.textContent='No deletion history has been recorded.';return;}
+      for(const entry of entries){
+        const item=document.createElement('div');item.className='notice';
+        const heading=document.createElement('strong');
+        heading.textContent=(entry.deletedByEmail||'Unknown account')+' · '+(entry.deletedAt?new Date(entry.deletedAt).toLocaleString():'Time unavailable');
+        const detail=document.createElement('p');
+        detail.textContent=(entry.records||[]).map(record=>record.collection+' · '+(record.label||record.id)+(record.date?' · '+record.date:'')).join(' | ');
+        item.append(heading,detail);container.append(item);
+      }
+    } catch(err) {
+      container.textContent='Could not load deletion history: '+(err.message||'Unknown error');
+    } finally {button.disabled=false;}
+  };
   function attachSharedListener() {
     if(sharedUnsubscribe) sharedUnsubscribe();
     sharedUnsubscribe=onSnapshot(sharedRef(),snap=>{
