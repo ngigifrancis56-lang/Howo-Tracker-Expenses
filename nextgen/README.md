@@ -10,13 +10,13 @@ This is a separate application scaffold. It lives on the `apex-react-springboot-
 ## Local development
 
 ### Backend
-Requires Java 21 and PostgreSQL.
+Requires Java 21, Maven and PostgreSQL.
 ```bash
 cd nextgen/backend
 export DB_URL=jdbc:postgresql://localhost:5432/apex_logistics
 export DB_USERNAME=postgres
 export DB_PASSWORD=your-local-password
-./mvnw spring-boot:run
+mvn spring-boot:run
 ```
 API health: `http://localhost:8080/api/health`
 
@@ -27,7 +27,7 @@ cd nextgen/frontend
 npm install
 npm run dev
 ```
-The Vite dev server proxies `/api` to the backend.
+The Vite dev server proxies `/api` to the backend at `http://localhost:8080`.
 
 ## Data safety
 The new app uses a separate database. It does not connect to, modify, or migrate production records automatically. A future import will be an explicit, validated, backed-up operation after the old data has been reconciled.
