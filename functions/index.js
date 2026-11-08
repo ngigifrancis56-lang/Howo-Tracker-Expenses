@@ -64,7 +64,7 @@ function removedRecords(before, after) {
   return removed;
 }
 
-exports.setMasterPin = onCall(async (request) => {
+exports.getMasterPinStatus = onCall(async (request) => {\n  requireUser(request);\n  const snap = await ref([...SECURITY, "masterPin"]).get();\n  return { configured: snap.exists };\n});\n\nexports.setMasterPin = onCall(async (request) => {
   const user = requireUser(request);
   const pin = request.data?.pin;
   if (!validPin(pin)) {
