@@ -1,6 +1,7 @@
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, setPersistence, browserLocalPersistence, indexedDBLocalPersistence, signOut as fbSignOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, runTransaction, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, doc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
 import { $, blank } from "./utils.js";
 
 const COMPANY_DOC = ["companies","apex-logistic-group","appData","fleetledger"];
@@ -53,12 +54,10 @@ export function createAuth({state,getData,setData,render,status,startFleetChat,s
     const local=getData();
     const legacySnap=await getDoc(legacyRef(state.user.uid));
     const legacy=legacySnap.exists()?legacySnap.data():{};
-    await runTransaction(state.db,async tx=>{
-      const sharedSnap=await tx.get(sharedRef());
-      const remote=sharedSnap.exists()?sharedSnap.data():{};
-      const merged=mergeData(mergeData(remote,legacy),local);
-      tx.set(sharedRef(),merged);
-    });
+    const sharedSnap=await getDoc(sharedRef());
+    const remote=sharedSnap.exists()?sharedSnap.data():{};
+    const merged=mergeData(mergeData(remote,legacy),local);
+    await httpsCallable(state.functions,'syncCompanyData')({payload:merged});
     const latest=await getDoc(sharedRef());
     if(latest.exists()) setData(mergeData(latest.data(),getData()));
     localStorage.setItem('fleetledger-data',JSON.stringify(getData()));
@@ -68,15 +67,56 @@ export function createAuth({state,getData,setData,render,status,startFleetChat,s
     attachSharedListener();
     render();
   }
-  async function syncCloud() {
-    if(!state.user||!state.db) return;
+  async function syncCloud(authorizationToken='') {
+    if(!state.user||!state.db||!state.functions) return;
     const local=getData();
-    await runTransaction(state.db,async tx=>{
-      const snap=await tx.get(sharedRef());
-      tx.set(sharedRef(),mergeData(snap.exists()?snap.data():{},local));
-    });
+    await httpsCallable(state.functions,'syncCompanyData')({payload:local,authorizationToken});
     status('Synced shared company records · '+state.user.email);
   }
+  async function refreshMasterPinStatus() {
+    const statusNode=$('masterPinStatus');
+    if(!statusNode||!state.functions||!state.user)return;
+    try {
+      const result=await httpsCallable(state.functions,'getMasterPinStatus')({});
+      const configured=!!result.data?.configured;
+      statusNode.textContent=configured?'Master PIN is configured. Deletions require it.':'No master PIN is configured yet. Set one below before deleting records.';
+      $('masterPinSetupFields').hidden=configured;
+    } catch(err) {
+      statusNode.textContent='Could not check master PIN status: '+(err.message||'Unknown error');
+    }
+  }
+  async function requestDeletionAuthorization() {
+    if(!state.user||!state.functions) {
+      alert('Connect to the cloud before deleting records. Your record has not been changed.');
+      return null;
+    }
+    const pin=prompt('Enter the company master PIN to authorise this deletion:');
+    if(pin===null)return null;
+    try {
+      const result=await httpsCallable(state.functions,'authorizeDeletion')({pin});
+      return result.data?.authorizationToken||null;
+    } catch(err) {
+      alert((err.message||'PIN authorisation failed.')+' No record was deleted.');
+      return null;
+    }
+  }
+  $('masterPinForm').onsubmit=async e=>{
+    e.preventDefault();
+    const pin=$('masterPinInput').value;
+    const confirmPin=$('masterPinConfirm').value;
+    if(pin!==confirmPin){alert('The PIN entries do not match.');return;}
+    const button=$('masterPinSave');
+    button.disabled=true;
+    try {
+      await httpsCallable(state.functions,'setMasterPin')({pin});
+      $('masterPinInput').value='';
+      $('masterPinConfirm').value='';
+      await refreshMasterPinStatus();
+      alert('Company master PIN configured. Keep it private and share it only with trusted staff.');
+    } catch(err) {
+      alert(err.message||'Could not configure the master PIN.');
+    } finally {button.disabled=false;}
+  };
   function attachSharedListener() {
     if(sharedUnsubscribe) sharedUnsubscribe();
     sharedUnsubscribe=onSnapshot(sharedRef(),snap=>{
@@ -98,7 +138,7 @@ export function createAuth({state,getData,setData,render,status,startFleetChat,s
   }
   async function prepareFirebase(cfg) {
     state.authApp=getApps().length?getApp():initializeApp(cfg);
-    state.auth=getAuth(state.authApp); state.db=getFirestore(state.authApp);
+    state.auth=getAuth(state.authApp); state.db=getFirestore(state.authApp); state.functions=getFunctions(state.authApp);
     try { await setPersistence(state.auth,browserLocalPersistence); }
     catch(err){console.warn('Local auth persistence unavailable; trying IndexedDB.',err);await setPersistence(state.auth,indexedDBLocalPersistence);}
     if(!state.authUnsubscribe) state.authUnsubscribe=onAuthStateChanged(state.auth,async current=>{
@@ -138,5 +178,5 @@ export function createAuth({state,getData,setData,render,status,startFleetChat,s
     try{const c=JSON.parse(localStorage.getItem('fleetledger-firebase-config')||'null');if(c){$('fbApiKey').value=c.apiKey||'';$('fbAuthDomain').value=c.authDomain||'';$('fbProjectId').value=c.projectId||'';$('fbBucket').value=c.storageBucket||'';$('fbSender').value=c.messagingSenderId||'';$('fbAppId').value=c.appId||'';status('Checking your saved Firebase session…');prepareFirebase(c).catch(err=>{state.cloudReady=false;console.error('Firebase init failed:',err);showLogin('Could not initialise Firebase: '+err.message);status('Firebase unavailable · local records preserved');});}else showLogin('Connect Firebase and sign in to access your fleet records.');}
     catch(err){showLogin('Saved Firebase settings could not be read: '+err.message);console.error(err);}
   }
-  return {showLogin,showApp,loginConfig,prepareFirebase,syncCloud,loadCloud,reconnectCloud,initialize};
+  return {showLogin,showApp,loginConfig,prepareFirebase,syncCloud,loadCloud,reconnectCloud,requestDeletionAuthorization,refreshMasterPinStatus,initialize};
 }
