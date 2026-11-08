@@ -229,8 +229,9 @@ export function createAuth({state,getData,setData,save,render,status,startFleetC
       if(!email||password.length<6)throw new Error("Enter an email and a password of at least 6 characters.");
       $("loginError").textContent="Creating account…";
       membershipApi.setRegistrationProfile($("registerName")?.value.trim()||"", $("registerPhone")?.value.trim()||"");
-      await createUserWithEmailAndPassword(state.auth,email,password);
-      await membershipApi.register();
+      const credential=await createUserWithEmailAndPassword(state.auth,email,password);
+      state.user=credential.user;
+      await membershipApi.register(credential.user);
     }
     catch(err){$('loginError').textContent=err.message;}
   };
