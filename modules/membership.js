@@ -80,9 +80,9 @@ export function createMembership({state,status}) {
   function setRegistrationProfile(displayName,phone) {
     registrationProfile={displayName:String(displayName||"").trim().slice(0,100),phone:String(phone||"").trim().slice(0,30)};
   }
-  async function register() {
-    if(!state.user)throw new Error("Account creation did not complete.");
-    if(!state.user.emailVerified)await sendEmailVerification(state.user);
+  async function register(user=state.user) {
+    if(!user)throw new Error("Account creation did not complete.");
+    if(!user.emailVerified)await sendEmailVerification(user);
     registrationProfile={displayName:"",phone:""};
     status("Verification email sent. Verify your email, then wait for administrator approval.");
   }
