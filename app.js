@@ -43,6 +43,7 @@ async function syncPendingChanges(){
   }finally{syncInFlight=false;}
 }
 function save(options={}){
+  if(state.membership?.role==="staff"){status("Staff access is currently view-only. Ask an administrator for Manager access to make changes.");return;}
   if(options.deletedRecord){
     data._deletionAudit=Array.isArray(data._deletionAudit)?data._deletionAudit:[];
     data._deletionAudit.push({id:uid(),deletedAt:new Date().toISOString(),deletedBy:state.user?.email||'Local user',...options.deletedRecord});
