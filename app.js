@@ -37,7 +37,7 @@ async function syncPendingChanges(){
         pendingDeletionAuthorizationToken='';
         localStorage.removeItem('fleetledger-deletion-auth-token');
       } catch(error) {
-        if(pendingDeletionAuthorizationToken && error.code==='functions/permission-denied') {
+        if(error.code==='functions/permission-denied') {
           const replacement=await authApi.requestDeletionAuthorization();
           if(replacement) {
             pendingDeletionAuthorizationToken=replacement;
