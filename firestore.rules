@@ -1,6 +1,12 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // All authenticated Apex Logistic Group users share the company dataset.
+    // Access is limited to signed-in users; never publish this collection.
+    match /companies/apex-logistic-group/appData/{documentId} {
+      allow read, write: if request.auth != null;
+    }
+    // Keep legacy per-user records readable/writable during the migration period.
     match /users/{userId}/appData/{documentId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
@@ -12,12 +18,8 @@ service cloud.firestore {
         && request.resource.data.createdAt == request.time
         && request.resource.data.keys().hasOnly(['text','senderUid','senderEmail','createdAt','edited','imageUrl','imagePath'])
         && (
-          (request.resource.data.text is string
-            && request.resource.data.text.size() > 0
-            && request.resource.data.text.size() <= 2000)
-          || (request.resource.data.imageUrl is string
-            && request.resource.data.imagePath is string
-            && request.resource.data.imagePath.matches('fleetChat/' + request.auth.uid + '/.*'))
+          (request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 2000)
+          || (request.resource.data.imageUrl is string && request.resource.data.imagePath is string && request.resource.data.imagePath.matches('fleetChat/' + request.auth.uid + '/.*'))
         );
       allow update: if request.auth != null
         && resource.data.senderUid == request.auth.uid
