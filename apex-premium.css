@@ -1,0 +1,33 @@
+/* Apex Logistic Group — premium interface refinement (additive; preserves app behavior) */
+:root{--apex-midnight:#071a31;--apex-navy:#0d2745;--apex-blue:#1677e8;--apex-cyan:#25b8e8;--apex-border:#e4ebf4}
+@media(min-width:900px){
+  .tabs{width:276px;padding:20px 14px 22px;background:linear-gradient(180deg,#0b2441 0%,#07182d 100%);box-shadow:10px 0 34px rgba(5,20,39,.16)}
+  .tabs:before{content:"🚚  APEX\A      LOGISTIC GROUP";white-space:pre;line-height:1.35;font-size:19px;letter-spacing:-.035em;padding:12px 12px 25px;margin:0 4px 13px;border-bottom:1px solid rgba(255,255,255,.13);text-shadow:0 3px 16px rgba(0,0,0,.2)}
+  .tabs:after{content:"MOVE  ·  HAUL  ·  PROSPER";white-space:normal;margin: auto 4px 4px;padding:15px 10px;border:1px solid rgba(87,164,255,.3);border-radius:14px;background:linear-gradient(135deg,rgba(23,105,170,.18),rgba(9,30,54,.45));color:#b8d9fb;text-align:center;font-size:10px;font-weight:850;letter-spacing:.12em}
+  .tabs button{position:relative;min-height:49px;padding:11px 14px 11px 16px;border-radius:12px;color:#c8d7e8;font-size:13px;letter-spacing:.005em;transition:background .18s ease,color .18s ease,transform .18s ease,border-color .18s ease}
+  .tabs button:before{font-size:17px;filter:saturate(.8)}
+  .tabs button:hover{transform:translateX(2px);background:rgba(255,255,255,.075);border-color:rgba(255,255,255,.06)}
+  .tabs button.active{background:linear-gradient(105deg,#0878f9 0%,#1769d2 100%);border-color:rgba(107,184,255,.7);box-shadow:0 8px 22px rgba(0,104,230,.26),inset 0 1px 0 rgba(255,255,255,.16)}
+  .tabs button.active:after{content:"";position:absolute;left:-14px;top:9px;bottom:9px;width:4px;border-radius:0 5px 5px 0;background:#39c5ff;box-shadow:0 0 14px rgba(57,197,255,.55)}
+  header#appHeader{padding:17px 32px;background:linear-gradient(110deg,#071a31 0%,#0d3154 62%,#155b91 100%);border-bottom:1px solid rgba(255,255,255,.08)}
+  #appMain.wrap{padding:26px 32px 54px}
+}
+header#appHeader h1{letter-spacing:-.045em}
+header#appHeader .pill,#syncBadge{border:1px solid rgba(255,255,255,.22);box-shadow:0 4px 14px rgba(0,0,0,.08)}
+.dashboard-intro{padding:7px 2px 2px}
+.dashboard-heading{letter-spacing:-.05em}
+.dashboard-live{box-shadow:0 3px 12px rgba(32,163,107,.08)}
+.card,.box{box-shadow:0 5px 22px rgba(13,39,69,.045)}
+.card:hover,.box:hover{transform:translateY(-1px)}
+.tabs button:focus-visible,.btn:focus-visible{outline:3px solid #80c7ff;outline-offset:3px}
+@media(max-width:899px){
+  .tabs{gap:6px;padding:8px;background:rgba(255,255,255,.94);border:1px solid #e2eaf3;border-radius:14px;box-shadow:0 5px 18px rgba(13,39,69,.08)}
+  .tabs button{border-radius:10px}
+  .tabs button.active{background:linear-gradient(110deg,#0d3154,#1677e8);box-shadow:0 4px 12px rgba(22,119,232,.22)}
+}
+@media(max-width:600px){
+  header#appHeader{background:linear-gradient(110deg,#071a31,#10436d);padding-left:16px;padding-right:16px}
+  #appMain.wrap{padding-left:13px;padding-right:13px}
+  .dashboard-intro{gap:8px}
+}
+@media(prefers-reduced-motion:reduce){.tabs button,.card,.box{transition:none!important;transform:none!important}}
