@@ -92,13 +92,41 @@ export function initReports({getData}) {
       </body></html>`;
   }
 
+  function validReportDates() {
+    const from=$('reportFrom').value;
+    const to=$('reportTo').value;
+    if(!from || !to) {
+      alert('Please select both a From date and a To date before generating the report.');
+      return false;
+    }
+    if(from>to) {
+      alert('The From date cannot be later than the To date. Please correct the date range.');
+      return false;
+    }
+    return true;
+  }
+
+  $('reportFrom').required=true;
+  $('reportTo').required=true;
+
   $('runReport').onclick=()=>{
+    if(!validReportDates()) return;
     latestReport=collectReport();
     renderReport(latestReport);
     $('exportReportPdf').disabled=false;
   };
 
+  $('reportFrom').addEventListener('change',()=>{
+    latestReport=null;
+    $('exportReportPdf').disabled=true;
+  });
+  $('reportTo').addEventListener('change',()=>{
+    latestReport=null;
+    $('exportReportPdf').disabled=true;
+  });
+
   $('exportReportPdf').onclick=()=>{
+    if(!validReportDates()) return;
     if(!latestReport) {
       latestReport=collectReport();
       renderReport(latestReport);
