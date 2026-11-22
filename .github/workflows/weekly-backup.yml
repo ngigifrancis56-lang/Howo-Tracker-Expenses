@@ -1,0 +1,37 @@
+name: Apex Logistic Group weekly JSON backup
+on:
+  schedule:
+    # 7:05 PM East Africa Time (UTC+3), every day.
+    # The script creates a new snapshot on Saturday and refreshes private
+    # seven-day download links for all stored backups on the other days.
+    - cron: "5 16 * * *"
+  workflow_dispatch:
+    inputs:
+      force_backup:
+        description: "Create or refresh this week's JSON backup now"
+        required: true
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: apex-weekly-json-backup
+  cancel-in-progress: false
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out app
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install Firebase Admin SDK
+        run: npm install --no-save firebase-admin
+      - name: Create backup and refresh Notes download links
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          FORCE_BACKUP: ${{ github.event_name == 'workflow_dispatch' && inputs.force_backup && 'true' || 'false' }}
+        run: node .github/scripts/weekly-backup.cjs
