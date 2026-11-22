@@ -17,7 +17,7 @@ export function initReports({getData}) {
     const driverPay=trips.reduce((sum,x)=>sum+Number(x.driverPay||0),0);
     return {
       from,to,vehicleId,
-      vehicle:vehicleId?name(data.vehicles,vehicleId):'All vehicles',
+      vehicle:allVehicles?'All vehicles':name(data.vehicles,vehicleId),
       trips,expenses,
       income,tripCosts,otherExpenses,
       operatingCosts:tripCosts+otherExpenses,
@@ -99,7 +99,7 @@ export function initReports({getData}) {
       alert('Please select both a From date and a To date before generating the report.');
       return false;
     }
-    if(from>to) {
+    if(!$('reportVehicle').value) {\n      alert('Please select a specific vehicle or deliberately choose All vehicles.');\n      return false;\n    }\n    if(from>to) {
       alert('The From date cannot be later than the To date. Please correct the date range.');
       return false;
     }
@@ -107,7 +107,7 @@ export function initReports({getData}) {
   }
 
   $('reportFrom').required=true;
-  $('reportTo').required=true;
+  $('reportTo').required=true;\n  $('reportVehicle').required=true;
 
   $('runReport').onclick=()=>{
     if(!validReportDates()) return;
