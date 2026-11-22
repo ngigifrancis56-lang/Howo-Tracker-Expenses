@@ -9,7 +9,7 @@ export function initReports({getData}) {
     const from=$('reportFrom').value;
     const to=$('reportTo').value;
     const vehicleId=$('reportVehicle').value;
-    const trips=data.trips.filter(x=>(!from||x.date>=from)&&(!to||x.date<=to)&&(!vehicleId||x.vehicleId===vehicleId));
+    const trips=data.trips.filter(x=>(!from||x.date>=from)&&(!to||x.date<=to)&&(vehicleId==='__all__'||x.vehicleId===vehicleId));
     const expenses=data.expenses.filter(x=>(!from||x.date>=from)&&(!to||x.date<=to)&&(!vehicleId||x.vehicleId===vehicleId));
     const income=trips.reduce((sum,x)=>sum+Number(x.income||0),0);
     const tripCosts=expenseTotal(trips);
@@ -17,7 +17,7 @@ export function initReports({getData}) {
     const driverPay=trips.reduce((sum,x)=>sum+Number(x.driverPay||0),0);
     return {
       from,to,vehicleId,
-      vehicle:allVehicles?'All vehicles':name(data.vehicles,vehicleId),
+      vehicle:vehicleId==='__all__'?'All vehicles':name(data.vehicles,vehicleId),
       trips,expenses,
       income,tripCosts,otherExpenses,
       operatingCosts:tripCosts+otherExpenses,
