@@ -59,13 +59,17 @@ async function main() {
   if (shouldCreate) {
     const backupData = { ...current };
     backupData.notes = notes.filter(n => n && n.systemType !== "weekly-backup");
+    // Keep fleet collections at the JSON root so the existing Restore JSON
+    // control can validate and restore this backup without a conversion step.
     const payload = {
-      format: "Apex Logistic Group JSON backup",
-      version: 1,
-      generatedAt: new Date().toISOString(),
-      timezone: TZ,
-      week: { from: period.from, to: period.to },
-      data: backupData
+      ...backupData,
+      _backupInfo: {
+        format: "Apex Logistic Group JSON backup",
+        version: 1,
+        generatedAt: new Date().toISOString(),
+        timezone: TZ,
+        week: { from: period.from, to: period.to }
+      }
     };
     const path = "fleetBackups/" + period.from + "_to_" + period.to + ".json";
     await bucket.file(path).save(Buffer.from(JSON.stringify(payload, null, 2)), {
