@@ -6,6 +6,7 @@ import { initRecords } from "./modules/records.js";
 import { initDataTools } from "./modules/data-tools.js";
 import { initReports } from "./modules/reports.js";
 import { driverCalc, expenseTotal } from "./modules/finance.js";
+import { initNotes } from "./modules/notes.js";
 
 const state={db:null,auth:null,user:null,cloudReady:false,syncPending:localStorage.getItem('fleetledger-sync-pending')==='1',authUnsubscribe:null,authApp:null,chatUnsubscribe:null};
 
@@ -13,7 +14,9 @@ let data=JSON.parse(localStorage.getItem('fleetledger-data')||'null')||blank();
 let lastSavedData=JSON.parse(JSON.stringify(data));
 
 const dashboard=createDashboard({getData:()=>data});
-const {render,renderWeekly}=dashboard;
+const {render:renderDashboard,renderWeekly}=dashboard;
+let renderNotes=()=>{};
+const render=()=>{renderDashboard();renderNotes()};
 const chatApi=createChat({state});
 const {startFleetChat,stopFleetChat}=chatApi;
 const authApi=createAuth({state,getData:()=>data,setData:value=>{data=value;lastSavedData=JSON.parse(JSON.stringify(value))},save,render,status,startFleetChat,stopFleetChat});
@@ -79,6 +82,7 @@ function save(options={}){
 };
 const download=(filename,content,type)=>{let a=document.createElement('a'),u=URL.createObjectURL(new Blob([content],{type}));a.href=u;a.download=filename;a.click();URL.revokeObjectURL(u)};
 initRecords({getData:()=>data,save,requestDeletionAuthorization:authApi.requestDeletionAuthorization});
+renderNotes=initNotes({getData:()=>data,save,requestDeletionAuthorization:authApi.requestDeletionAuthorization});
 initDataTools({getData:()=>data,setData:value=>{data=value},save,download,render});
 initReports({getData:()=>data});
 
