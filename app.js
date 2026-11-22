@@ -53,7 +53,7 @@ function save(options={}){
   }
   // Stamp changed records and keep deletion tombstones so another device cannot
   // silently resurrect a deleted item or overwrite a newer edit.
-  const keys=['vehicles','drivers','trips','expenses','adjustments'];
+  const keys=['vehicles','drivers','trips','expenses','adjustments','notes'];
   data._syncMeta=data._syncMeta||{};
   data._syncMeta.deleted=data._syncMeta.deleted||{};
   const now=new Date().toISOString();
