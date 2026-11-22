@@ -10,7 +10,7 @@ export function initReports({getData}) {
     const to=$('reportTo').value;
     const vehicleId=$('reportVehicle').value;
     const trips=data.trips.filter(x=>(!from||x.date>=from)&&(!to||x.date<=to)&&(vehicleId==='__all__'||x.vehicleId===vehicleId));
-    const expenses=data.expenses.filter(x=>(!from||x.date>=from)&&(!to||x.date<=to)&&(!vehicleId||x.vehicleId===vehicleId));
+    const expenses=data.expenses.filter(x=>(!from||x.date>=from)&&(!to||x.date<=to)&&(vehicleId==='__all__'||x.vehicleId===vehicleId));
     const income=trips.reduce((sum,x)=>sum+Number(x.income||0),0);
     const tripCosts=expenseTotal(trips);
     const otherExpenses=expenses.reduce((sum,x)=>sum+Number(x.amount||0),0);
@@ -121,6 +121,10 @@ export function initReports({getData}) {
     $('exportReportPdf').disabled=true;
   });
   $('reportTo').addEventListener('change',()=>{
+    latestReport=null;
+    $('exportReportPdf').disabled=true;
+  });
+  $('reportVehicle').addEventListener('change',()=>{
     latestReport=null;
     $('exportReportPdf').disabled=true;
   });
