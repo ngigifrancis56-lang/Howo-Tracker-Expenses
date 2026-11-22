@@ -99,7 +99,11 @@ export function initReports({getData}) {
       alert('Please select both a From date and a To date before generating the report.');
       return false;
     }
-    if(!$('reportVehicle').value) {\n      alert('Please select a specific vehicle or deliberately choose All vehicles.');\n      return false;\n    }\n    if(from>to) {
+    if(!$('reportVehicle').value) {
+      alert('Please select a specific vehicle or deliberately choose All vehicles.');
+      return false;
+    }
+    if(from>to) {
       alert('The From date cannot be later than the To date. Please correct the date range.');
       return false;
     }
@@ -107,7 +111,8 @@ export function initReports({getData}) {
   }
 
   $('reportFrom').required=true;
-  $('reportTo').required=true;\n  $('reportVehicle').required=true;
+  $('reportTo').required=true;
+  $('reportVehicle').required=true;
 
   $('runReport').onclick=()=>{
     if(!validReportDates()) return;
