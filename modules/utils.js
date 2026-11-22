@@ -1,7 +1,7 @@
 export const $=id=>document.getElementById(id);
 export const today=()=>new Date().toLocaleDateString('en-CA');
 export const money=n=>'KSh '+Number(n||0).toLocaleString('en-KE',{maximumFractionDigits:2});
-export const blank=()=>({vehicles:[],drivers:[],trips:[],expenses:[],adjustments:[]});
+export const blank=()=>({vehicles:[],drivers:[],trips:[],expenses:[],adjustments:[],notes:[]});
 export function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
 export function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 export function opts(sel,arr,first){let old=sel.value;sel.innerHTML=(first?'<option value="">'+first+'</option>':'')+arr.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');if(arr.some(x=>x.id===old))sel.value=old;}
