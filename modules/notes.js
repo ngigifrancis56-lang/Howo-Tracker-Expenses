@@ -1,0 +1,17 @@
+import { $, today, uid, esc } from "./utils.js";
+export function initNotes({getData,save,requestDeletionAuthorization}) {
+ const form=$('noteForm');let editingId=null;
+ function resetForm(){editingId=null;form.reset();$('noteId').value='';$('noteDate').value=today();$('noteSave').textContent='Save note';$('noteCancel').classList.add('hidden')}
+ function render(){
+  const all=[...(getData().notes||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.updatedAt||'').localeCompare(a.updatedAt||''));
+  const q=$('noteSearch').value.trim().toLowerCase(),category=$('noteFilterCategory').value,date=$('noteFilterDate').value;
+  const rows=all.filter(n=>(!category||n.category===category)&&(!date||n.date===date)&&(!q||[n.title,n.details,n.category].some(v=>String(v||'').toLowerCase().includes(q))));
+  $('notesCount').textContent=all.length+' '+(all.length===1?'note':'notes');
+  $('notesList').innerHTML=rows.length?rows.map(n=>`<article class="note-card"><div class="note-card-head"><div><span class="note-category">${esc(n.category||'General')}</span><h3>${esc(n.title)}</h3><small>${esc(n.date||'')}</small></div><div class="actions"><button class="btn secondary small" type="button" data-edit-note="${esc(n.id)}">Edit</button><button class="btn danger small" type="button" data-delete-note="${esc(n.id)}">Delete</button></div></div><p class="note-details">${esc(n.details).replace(/\n/g,'<br>')}</p></article>`).join(''):'<div class="empty">'+(all.length?'No notes match your filters.':'No notes yet. Add your first note above.')+'</div>';
+ }
+ form.onsubmit=e=>{e.preventDefault();const title=$('noteTitle').value.trim(),details=$('noteDetails').value.trim(),date=$('noteDate').value;if(!title||!details||!date){alert('Please enter a title, date and note details.');return;}const record={title,details,date,category:$('noteCategory').value};if(editingId){const n=(getData().notes||[]).find(x=>x.id===editingId);if(!n)return;Object.assign(n,record)}else{getData().notes=getData().notes||[];getData().notes.push({id:uid(),...record})}resetForm();save()};
+ $('noteCancel').onclick=resetForm;
+ ['noteSearch','noteFilterCategory','noteFilterDate'].forEach(id=>$(id).addEventListener(id==='noteSearch'?'input':'change',render));
+ $('notesList').addEventListener('click',async e=>{const edit=e.target.closest('[data-edit-note]');if(edit){const n=(getData().notes||[]).find(x=>x.id===edit.dataset.editNote);if(!n)return;editingId=n.id;$('noteId').value=n.id;$('noteTitle').value=n.title||'';$('noteDate').value=n.date||today();$('noteCategory').value=n.category||'General';$('noteDetails').value=n.details||'';$('noteSave').textContent='Save changes';$('noteCancel').classList.remove('hidden');form.scrollIntoView({behavior:'smooth',block:'start'});return;}const del=e.target.closest('[data-delete-note]');if(!del)return;const id=del.dataset.deleteNote,n=(getData().notes||[]).find(x=>x.id===id);if(!n||!confirm('Delete this note?'))return;if(!(await requestDeletionAuthorization('notes',id)))return;getData().notes=getData().notes.filter(x=>x.id!==id);save({deletedRecord:{collection:'notes',id,label:n.title,date:n.date||null}});if(editingId===id)resetForm()});
+ $('noteDate').value=today();render();return render;
+}

@@ -4,7 +4,7 @@ import { getFirestore, doc, getDoc, setDoc, runTransaction, onSnapshot } from "h
 import { $, blank } from "./utils.js";
 
 const COMPANY_DOC = ["companies","apex-logistic-group","appData","fleetledger"];
-const RECORD_KEYS = ["vehicles","drivers","trips","expenses","adjustments"];
+const RECORD_KEYS = ["vehicles","drivers","trips","expenses","adjustments","notes"];
 
 function stamp(value) {
   const n = Date.parse(value || "");

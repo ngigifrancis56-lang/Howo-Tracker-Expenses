@@ -165,8 +165,9 @@ table{min-width:650px}th{background:#f5f8fc;color:#52657b;font-size:11px;text-tr
   .tabs button:nth-child(4):before{content:"▤"}
   .tabs button:nth-child(5):before{content:"🚛"}
   .tabs button:nth-child(6):before{content:"▥"}
-  .tabs button:nth-child(7):before{content:"⚙"}
-  .tabs button:nth-child(8):before{content:"☁"}
+  .tabs button:nth-child(7):before{content:"📝"}
+  .tabs button:nth-child(8):before{content:"⚙"}
+  .tabs button:nth-child(9):before{content:"☁"}
   .tabs button:hover{background:rgba(255,255,255,.09);color:#fff}
   .tabs button.active{background:linear-gradient(100deg,#0878f9,#1769d2);border-color:#2688ff;color:#fff;box-shadow:0 7px 18px rgba(0,100,230,.25)}
   .dashboard-panel{gap:18px!important}
@@ -230,3 +231,6 @@ table{min-width:650px}th{background:#f5f8fc;color:#52657b;font-size:11px;text-tr
 .trip-detail-grid .trip-notes{grid-column:1/-1}
 .trip-manage{justify-content:flex-end;padding:0 16px 15px;background:#fbfcfe}
 @media(max-width:600px){.trip-summary{padding:13px 12px}.trip-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:13px 12px}.trip-manage{padding:0 12px 13px}}
+
+/* Company notes notebook */
+.notes-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.note-card{border:1px solid #e5ebf2;border-radius:15px;padding:15px;background:linear-gradient(145deg,#fff,#fbfdff);min-width:0}.note-card-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.note-card h3{margin:7px 0 3px;overflow-wrap:anywhere}.note-card small{color:#718397;font-size:11px}.note-category{display:inline-block;padding:5px 9px;border-radius:30px;background:#edf5fc;color:#24577c;font-size:10px;font-weight:800}.note-details{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6;color:#40566d;font-size:13px;margin:13px 0 0}.note-card .actions{flex-wrap:nowrap}.note-card .btn{white-space:nowrap}@media(max-width:700px){.notes-list{grid-template-columns:1fr}.note-card-head{flex-wrap:wrap}.note-card .actions{width:100%}}
