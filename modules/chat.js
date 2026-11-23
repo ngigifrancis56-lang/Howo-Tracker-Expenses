@@ -54,7 +54,7 @@ export function createChat({state}) {
       .messenger-body .chat-image{display:block;max-width:100%;max-height:180px;border-radius:10px;margin-top:6px}
       .messenger-body .actions{display:none!important}
       .messenger-compose{display:flex;gap:8px;padding:10px;border-top:1px solid #e8edf3;background:#fff}
-      .messenger-compose textarea{flex:1;min-width:0;max-height:95px;resize:none;border:1px solid #d9e2ec;border-radius:12px;padding:10px;font:13px inherit}
+      .messenger-compose textarea{flex:1;min-width:0;max-height:95px;resize:none;border:1px solid #d9e2ec;border-radius:12px;padding:10px;font:inherit;font-size:13px}
       .messenger-compose button{border:0;border-radius:11px;background:#1769aa;color:#fff;font-weight:750;padding:0 15px}
       .messenger-tools{display:flex;align-items:center;justify-content:space-between;padding:7px 12px;background:#fff;border-top:1px solid #f0f2f5}
       .messenger-tools button{border:0;background:transparent;color:#1769aa;font-size:11px;font-weight:750;cursor:pointer}
@@ -85,6 +85,8 @@ export function createChat({state}) {
     popupInput.addEventListener('focus',clearUnread);
     if($('floatingChatButton'))$('floatingChatButton').addEventListener('click',()=>{popup.classList.toggle('open');if(popup.classList.contains('open')){clearUnread();popupInput.focus()}});
     document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&popup?.classList.contains('open'))clearUnread()});
+    document.addEventListener('click',e=>{if(e.target.closest('[data-tab="chat"]'))clearUnread()});
+    window.addEventListener('message',e=>{if(e.data?.type==='APEX_OPEN_CHAT'){popup.classList.add('open');clearUnread()}});
     try{setUnread(Number(localStorage.getItem(unreadKey())||0))}catch{}
     if('Notification' in window){const status=popup.querySelector('#chatNotificationStatus');status.textContent=Notification.permission==='granted'?'Notifications enabled':'Notifications not enabled'}
   }
