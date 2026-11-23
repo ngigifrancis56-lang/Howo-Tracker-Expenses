@@ -91,7 +91,7 @@ initReports({getData:()=>data});
 
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('.panel').forEach(x=>x.classList.toggle('active',x.id===b.dataset.tab));render()});
 document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>document.querySelector(`[data-tab="${b.dataset.go}"]`).click());
-$('floatingChatButton').onclick=()=>document.querySelector('[data-tab="chat"]').click();
+// The floating chat control is managed by the Messenger-style pop-up in modules/chat.js.
 render();
 authApi.initialize();
 // Retry cloud loading/synchronisation as soon as connectivity returns. Pending
